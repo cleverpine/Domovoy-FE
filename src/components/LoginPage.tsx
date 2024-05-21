@@ -19,6 +19,8 @@ export const LoginPage = () => {
     { value: 'room406@cleverpine.com', label: 'Room 406' },
     { value: 'room407@cleverpine.com', label: 'Room 407' },
     { value: 'room408@cleverpine.com', label: 'Room 408' },
+    // TODO remove after testing is done
+    { value: 'moni404@cleverpine.com', label: 'Room 404' },
   ];
 
   useEffect(() => {

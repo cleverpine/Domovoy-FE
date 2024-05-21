@@ -205,7 +205,7 @@ const HomePage = () => {
 
   if (!localStorage.getItem('selectedRoom')) {
     handleLogout();
-    return null;
+    return <></>;
   } else {
     return (
       <div>
@@ -245,9 +245,10 @@ const HomePage = () => {
           <div className="content-container">
             <div className="left-side">
               {
-                roomEmailToNumberMap[localStorage.getItem('selectedRoom')!].split('').map((number: string, index: number) => (
-                  <div key={index} className="number">{number}</div>
-                ))
+                localStorage.getItem('selectedRoom') ?
+                  roomEmailToNumberMap[localStorage.getItem('selectedRoom')!].split('').map((number: string, index: number) => (
+                    <div key={index} className="number">{number}</div>
+                  )) : <p>no room</p>
               }
             </div>
             <div className="right-side">

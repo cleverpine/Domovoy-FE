@@ -9,6 +9,8 @@ export const ROOM_EMAILS_LIST = [
   "room406@cleverpine.com",
   "room407@cleverpine.com",
   "room408@cleverpine.com",
+  // TODO remove after testing is done
+  "moni404@cleverpine.com"
 ];
 export const FETCH_INTERVAL = 30000;
 export const TIME_UPDATE_INTERVAL = 1000;
