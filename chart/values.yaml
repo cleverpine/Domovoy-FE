@@ -5,7 +5,7 @@
 replicaCount: 1
 
 image:
-  repository: cleverpine.azurecr.io/Domovoy2.0
+  repository: cleverpine.azurecr.io/domovoy2.0
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag:
