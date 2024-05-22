@@ -1,0 +1,10 @@
+{{- if .Values.configMap.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "chart.fullname" . }}-configmap
+data:
+  env.config.json: |-
+    {{ .Values.configMap.data | toJson | indent 4 }}
+{{- end }}
+

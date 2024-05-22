@@ -1,0 +1,22 @@
+trigger:
+  - main
+  - stage
+  - release*
+  - develop
+
+pool:
+  vmImage: ubuntu-latest
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: DevOps/azure-pipeline-templates
+
+steps:
+  - task: InstallSSHKey@0
+    inputs:
+      knownHostsEntry: '$(KNOWN_HOSTS)'
+      sshKeySecureFile: 'id_rsa'  # This should be the name of the private key file uploaded to Secure Files
+      
+  - template: pipeline-fe.yaml@templates # Reference to your template file
