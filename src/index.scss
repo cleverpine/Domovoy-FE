@@ -1,0 +1,16 @@
+body {
+  margin: 0;
+  font-family: 'montserratRegular';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+@import 'assets/styles/reset.scss';
+@import 'assets/styles/home.scss';
+@import 'assets/styles/login.scss';
+@import 'assets/styles/fonts.scss';
