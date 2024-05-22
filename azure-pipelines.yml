@@ -1,0 +1,18 @@
+trigger:
+  - main
+  - stage
+  - release*
+  - develop
+
+pool:
+  vmImage: ubuntu-latest
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: DevOps/azure-pipeline-templates
+
+steps:
+      
+  - template: pipeline-fe.yaml@templates # Reference to your template file
