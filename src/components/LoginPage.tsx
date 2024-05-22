@@ -5,23 +5,11 @@ import { useEffect, useState } from "react";
 
 import { loginRequest } from "../config/authConfig";
 import { DEFAULT_SELECTED_ROOM, SELECTED_ROOM } from "../constants/login";
-import { RoomOption } from "../models/roomOption";
+import { roomEmailToNumberMap } from "../mappers/roomMapper";
 
 export const LoginPage = () => {
   const { instance, inProgress } = useMsal();
   const [selectedOption, setSelectedOption] = useState('');
-
-  const roomOptions: RoomOption[] = [
-    { value: 'room401@cleverpine.com', label: 'Room 401' },
-    { value: 'room402@cleverpine.com', label: 'Room 402' },
-    { value: 'room403@cleverpine.com', label: 'Room 403' },
-    { value: 'room405@cleverpine.com', label: 'Room 405' },
-    { value: 'room406@cleverpine.com', label: 'Room 406' },
-    { value: 'room407@cleverpine.com', label: 'Room 407' },
-    { value: 'room408@cleverpine.com', label: 'Room 408' },
-    // TODO remove after testing is done
-    { value: 'moni404@cleverpine.com', label: 'Room 404' },
-  ];
 
   useEffect(() => {
     if (localStorage.getItem(SELECTED_ROOM) === null) {
@@ -60,9 +48,9 @@ export const LoginPage = () => {
       </button>
       <div className="select-input-wrapper">
         <select className="select-room-input" id="options" value={selectedOption} onChange={handleChange}>
-          {roomOptions.map((room: RoomOption) => (
-            <option key={room.value} value={room.value}>
-              {room.label}
+          {Object.entries(roomEmailToNumberMap).map(([email, number]) => (
+            <option key={email} value={email}>
+              Room {number}
             </option>
           ))}
         </select>

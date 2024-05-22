@@ -3,7 +3,7 @@ import { format, isWithinInterval } from "date-fns";
 import { useEffect, useState } from 'react';
 
 import { graphConfig, loginRequest } from "../config/authConfig";
-import { AVAILABILITY_VIEW_INTERVAL, DATE_PATTERN, FETCH_INTERVAL, OVERLAY_STYLES, ROOM_EMAILS_LIST, ROOM_STATUSES, TIMEZONE, TIME_UPDATE_INTERVAL } from "../constants/home";
+import { AVAILABILITY_VIEW_INTERVAL, DATE_PATTERN, FETCH_INTERVAL, OVERLAY_STYLES, ROOM_STATUSES, TIMEZONE, TIME_UPDATE_INTERVAL } from "../constants/home";
 import { roomEmailToNumberMap } from "../mappers/roomMapper";
 
 const HomePage = () => {
@@ -83,7 +83,7 @@ const HomePage = () => {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        schedules: ROOM_EMAILS_LIST,
+        schedules: Object.keys(roomEmailToNumberMap),
         startTime: { dateTime: formattedDateNow, TIMEZONE },
         endTime: { dateTime: formattedDaysFromNow, TIMEZONE },
         AVAILABILITY_VIEW_INTERVAL,
@@ -206,86 +206,86 @@ const HomePage = () => {
   if (!localStorage.getItem('selectedRoom')) {
     handleLogout();
     return <></>;
-  } else {
-    return (
-      <div>
-        <div className="container">
-          <div className="time-container">
-            <p className="time">{formatTime(currentTime)}</p>
-            {(() => {
-              switch (roomStatus) {
-                case ROOM_STATUSES.BUSY:
-                  return (
-                    <div className="current-meeting-information">
-                      <div className="current-meeting-duration">
-                        <p className="current-meeting-duration-info">{formatMeetingsTime(currentMeeting.start.dateTime)}</p>
-                        <p className="current-meeting-duration-info">-</p>
-                        <p className="current-meeting-duration-info">{formatMeetingsTime(currentMeeting.end.dateTime)}</p>
-                      </div>
-                      <p className="current-meeting-owner">{currentMeeting.subject.trim()}'s meeting</p>
+  }
+
+  return (
+    <div>
+      <div className="container">
+        <div className="time-container">
+          <p className="time">{formatTime(currentTime)}</p>
+          {(() => {
+            switch (roomStatus) {
+              case ROOM_STATUSES.BUSY:
+                return (
+                  <div className="current-meeting-information">
+                    <div className="current-meeting-duration">
+                      <p className="current-meeting-duration-info">{formatMeetingsTime(currentMeeting.start.dateTime)}</p>
+                      <p className="current-meeting-duration-info">-</p>
+                      <p className="current-meeting-duration-info">{formatMeetingsTime(currentMeeting.end.dateTime)}</p>
                     </div>
-                  );
-                case ROOM_STATUSES.STARTING_SOON:
-                  return (
-                    <div className="current-meeting-information">
-                      <p className="starting-soon-meeting-info">Starts in {startingSoonMeetingMinutes} {startingSoonMeetingMinutes === 1 ? 'minute' : 'minutes'}</p>
-                      <p className="starting-soon-meeting-name">{todaysMeetings[0].subject.trim()}'s meeting</p>
-                    </div>
-                  );
-                case ROOM_STATUSES.AVAILABLE:
-                  return <p className="available-room">Available</p>;
-                default:
-                  return;
-              }
-            })()}
+                    <p className="current-meeting-owner">{currentMeeting.subject.trim()}'s meeting</p>
+                  </div>
+                );
+              case ROOM_STATUSES.STARTING_SOON:
+                return (
+                  <div className="current-meeting-information">
+                    <p className="starting-soon-meeting-info">Starts in {startingSoonMeetingMinutes} {startingSoonMeetingMinutes === 1 ? 'minute' : 'minutes'}</p>
+                    <p className="starting-soon-meeting-name">{todaysMeetings[0].subject.trim()}'s meeting</p>
+                  </div>
+                );
+              case ROOM_STATUSES.AVAILABLE:
+                return <p className="available-room">Available</p>;
+              default:
+                return;
+            }
+          })()}
+        </div>
+        <div className="top-container">
+          <div className={`overlay ${overlayStyles}`}></div>
+        </div>
+        <div className="content-container">
+          <div className="left-side">
+            {
+              localStorage.getItem('selectedRoom') ?
+                roomEmailToNumberMap[localStorage.getItem('selectedRoom')!].split('').map((number: string, index: number) => (
+                  <div key={index} className="number">{number}</div>
+                )) : <p>no room</p>
+            }
           </div>
-          <div className="top-container">
-            <div className={`overlay ${overlayStyles}`}></div>
-          </div>
-          <div className="content-container">
-            <div className="left-side">
-              {
-                localStorage.getItem('selectedRoom') ?
-                  roomEmailToNumberMap[localStorage.getItem('selectedRoom')!].split('').map((number: string, index: number) => (
-                    <div key={index} className="number">{number}</div>
-                  )) : <p>no room</p>
-              }
-            </div>
-            <div className="right-side">
-              <div className="box">
-                <p className="next-meetings">Next meetings</p>
-                {roomStatus === ROOM_STATUSES.BUSY && busyRoomMeetings.length > 0 ? (
-                  busyRoomMeetings.map((element: any, index: number) => (
-                    <div className="meeting-information" key={index}>
-                      <div className="meeting-duration">
-                        <p className="meeting-duration-info">{formatMeetingsTime(element.start.dateTime)}</p>
-                        <p className="meeting-duration-info">-</p>
-                        <p className="meeting-duration-info">{formatMeetingsTime(element.end.dateTime)}</p>
-                      </div>
-                      <p className="meeting-owner">{element.subject.trim()}'s meeting</p>
+          <div className="right-side">
+            <div className="box">
+              <p className="next-meetings">Next meetings</p>
+              {roomStatus === ROOM_STATUSES.BUSY && busyRoomMeetings.length > 0 ? (
+                busyRoomMeetings.map((element: any, index: number) => (
+                  <div className="meeting-information" key={index}>
+                    <div className="meeting-duration">
+                      <p className="meeting-duration-info">{formatMeetingsTime(element.start.dateTime)}</p>
+                      <p className="meeting-duration-info">-</p>
+                      <p className="meeting-duration-info">{formatMeetingsTime(element.end.dateTime)}</p>
                     </div>
-                  ))
-                ) : (roomStatus && roomStatus !== ROOM_STATUSES.BUSY) && todaysMeetings.length > 0 ? (
-                  todaysMeetings.map((element: any, index: number) => (
-                    <div className="meeting-information" key={index}>
-                      <div className="meeting-duration">
-                        <p className="meeting-duration-info">{formatMeetingsTime(element.start.dateTime)}</p>
-                        <p className="meeting-duration-info">-</p>
-                        <p className="meeting-duration-info">{formatMeetingsTime(element.end.dateTime)}</p>
-                      </div>
-                      <p className="meeting-owner">{element.subject.trim()}'s meeting</p>
+                    <p className="meeting-owner">{element.subject.trim()}'s meeting</p>
+                  </div>
+                ))
+              ) : (roomStatus && roomStatus !== ROOM_STATUSES.BUSY) && todaysMeetings.length > 0 ? (
+                todaysMeetings.map((element: any, index: number) => (
+                  <div className="meeting-information" key={index}>
+                    <div className="meeting-duration">
+                      <p className="meeting-duration-info">{formatMeetingsTime(element.start.dateTime)}</p>
+                      <p className="meeting-duration-info">-</p>
+                      <p className="meeting-duration-info">{formatMeetingsTime(element.end.dateTime)}</p>
                     </div>
-                  ))
-                ) : (
-                  <p className="no-meetings-message">No meetings for the rest of the day</p>
-                )}
-              </div>
+                    <p className="meeting-owner">{element.subject.trim()}'s meeting</p>
+                  </div>
+                ))
+              ) : (
+                <p className="no-meetings-message">No meetings for the rest of the day</p>
+              )}
             </div>
           </div>
         </div>
       </div>
-    );
-  }
-};
+    </div>
+  );
+}
 
 export default HomePage;
