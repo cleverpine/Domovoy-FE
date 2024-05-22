@@ -24,7 +24,7 @@ RUN npm run build
 FROM nginx:1.25
 
 # Copy the static content from the previous build stage to the html directory served by Nginx
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /app/build /usr/share/nginx/html
 
 # Remove the default configuration file that comes with nginx
 RUN rm /etc/nginx/conf.d/default.conf
