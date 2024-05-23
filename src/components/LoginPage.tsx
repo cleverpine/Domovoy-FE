@@ -12,8 +12,8 @@ export const LoginPage = () => {
   const [selectedOption, setSelectedOption] = useState('');
 
   useEffect(() => {
-    if (localStorage.getItem(SELECTED_ROOM) === null) {
-      localStorage.setItem(SELECTED_ROOM, DEFAULT_SELECTED_ROOM);
+    if (sessionStorage.getItem(SELECTED_ROOM) === null) {
+      sessionStorage.setItem(SELECTED_ROOM, DEFAULT_SELECTED_ROOM);
     }
   }, []);
 
@@ -26,7 +26,7 @@ export const LoginPage = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem(SELECTED_ROOM);
+    sessionStorage.removeItem(SELECTED_ROOM);
     instance.logoutRedirect().catch(e => {
       console.error(e);
     });
@@ -34,7 +34,7 @@ export const LoginPage = () => {
 
   const handleChange = (event: any) => {
     setSelectedOption(event.target.value);
-    localStorage.setItem(SELECTED_ROOM, event.target.value);
+    sessionStorage.setItem(SELECTED_ROOM, event.target.value);
   };
 
   return (
