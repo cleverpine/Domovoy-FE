@@ -5,7 +5,7 @@ export const msalConfig = {
     redirectUri: 'https://domovoy2.thepineslab.net/',
   },
   cache: {
-    cacheLocation: 'localStorage',
+    cacheLocation: 'sessionStorage',
     storeAuthStateInCookie: false,
   },
 };

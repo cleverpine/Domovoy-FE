@@ -4,7 +4,6 @@ $myImage: '../images/forest-background.png';
 .container {
   width: 100vw;
   height: 100vh;
-  overflow: hidden;
   display: flex;
   background-image: url(#{$myImage});
   background-size: cover;
@@ -27,6 +26,7 @@ $myImage: '../images/forest-background.png';
   font-weight: bold;
   font-size: 480px;
   color: $silver;
+  opacity: 0.8;
 }
 
 .right-side {
@@ -46,6 +46,7 @@ $myImage: '../images/forest-background.png';
   margin-bottom: 30px;
   border-radius: 10px;
   background-color: $silver;
+  opacity: 0.8;
   color: $dark;
   overflow: hidden;
 }
@@ -55,6 +56,7 @@ $myImage: '../images/forest-background.png';
   height: 65vh;
   position: absolute;
   clip-path: polygon(0 0, 100% 0, 100% 60%, 0 100%);
+  z-index: 1;
 }
 
 .overlay {

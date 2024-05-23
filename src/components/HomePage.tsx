@@ -91,7 +91,7 @@ const HomePage = () => {
     });
 
     const data = await response.json();
-    const selectedRoomEmail = localStorage.getItem('selectedRoom');
+    const selectedRoomEmail = sessionStorage.getItem('selectedRoom');
     const selectedRoomNumber = roomEmailToNumberMap[selectedRoomEmail!];
 
     getCurrentRoomSchedule(data, selectedRoomNumber);
@@ -203,7 +203,7 @@ const HomePage = () => {
     });
   };
 
-  if (!localStorage.getItem('selectedRoom')) {
+  if (!sessionStorage.getItem('selectedRoom')) {
     handleLogout();
     return <></>;
   }
@@ -246,8 +246,8 @@ const HomePage = () => {
         <div className="content-container">
           <div className="left-side">
             {
-              localStorage.getItem('selectedRoom') ?
-                roomEmailToNumberMap[localStorage.getItem('selectedRoom')!].split('').map((number: string, index: number) => (
+              sessionStorage.getItem('selectedRoom') ?
+                roomEmailToNumberMap[sessionStorage.getItem('selectedRoom')!].split('').map((number: string, index: number) => (
                   <div key={index} className="number">{number}</div>
                 )) : <p>no room</p>
             }
