@@ -87,7 +87,6 @@ $myImage: '../images/forest-background.png';
 }
 
 .next-meetings {
-  margin-bottom: 25px;
   text-align: center;
   font-weight: 600;
   font-size: 20px;
@@ -121,10 +120,10 @@ $myImage: '../images/forest-background.png';
 }
 
 .meeting-information {
-  margin-bottom: 20px;
   display: flex;
   flex-direction: column;
   gap: 5px;
+  margin-top: 20px;
 }
 
 .current-meeting-information {

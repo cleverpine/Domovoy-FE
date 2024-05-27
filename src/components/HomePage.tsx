@@ -1,5 +1,6 @@
 import { useMsal } from '@azure/msal-react';
 import { format, isWithinInterval } from "date-fns";
+import NoSleep from 'nosleep.js';
 import { useEffect, useState } from 'react';
 
 import { graphConfig, loginRequest } from "../config/authConfig";
@@ -21,6 +22,15 @@ const HomePage = () => {
   const [startingSoonMeetingMinutes, setStartingSoonMeetingMinutes] = useState<number>(0);
   // next meetings when the room is busy
   const [busyRoomMeetings, setBusyRoomMeetings] = useState<any>([]);
+
+  // Enable no sleep of screen when home page is rendered
+  useEffect(() => {
+    const newNoSleep = new NoSleep();
+
+    if (newNoSleep) {
+      newNoSleep.enable();
+    }
+  }, []);
 
   // Fetch calendar data on initial load and then every 30 seconds
   useEffect(() => {
@@ -249,7 +259,7 @@ const HomePage = () => {
               sessionStorage.getItem('selectedRoom') ?
                 roomEmailToNumberMap[sessionStorage.getItem('selectedRoom')!].split('').map((number: string, index: number) => (
                   <div key={index} className="number">{number}</div>
-                )) : <p>no room</p>
+                )) : ''
             }
           </div>
           <div className="right-side">
@@ -263,7 +273,7 @@ const HomePage = () => {
                       <p className="meeting-duration-info">-</p>
                       <p className="meeting-duration-info">{formatMeetingsTime(element.end.dateTime)}</p>
                     </div>
-                    <p className="meeting-owner">{element.subject.trim()}'s meeting</p>
+                    <p className="meeting-owner">{element.subject ? `${element.subject.trim()}'s meeting` : 'Error: Name is missing'}</p>
                   </div>
                 ))
               ) : (roomStatus && roomStatus !== ROOM_STATUSES.BUSY) && todaysMeetings.length > 0 ? (
@@ -274,7 +284,7 @@ const HomePage = () => {
                       <p className="meeting-duration-info">-</p>
                       <p className="meeting-duration-info">{formatMeetingsTime(element.end.dateTime)}</p>
                     </div>
-                    <p className="meeting-owner">{element.subject.trim()}'s meeting</p>
+                    <p className="meeting-owner">{element.subject ? `${element.subject.trim()}'s meeting` : 'Error: Name is missing'}</p>
                   </div>
                 ))
               ) : (
