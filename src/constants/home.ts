@@ -1,8 +1,11 @@
 export const DATE_PATTERN = "yyyy-MM-dd'T'HH:mm:ss";
 export const TIMEZONE = 'E. Europe Standard Time';
 export const AVAILABILITY_VIEW_INTERVAL = 30;
-export const FETCH_INTERVAL = 30000;
+export const FETCH_CALENDAR_INTERVAL = 30000;
+export const FETCH_TOKEN_INTERVAL = 1800000;
 export const TIME_UPDATE_INTERVAL = 1000;
+// in seconds
+export const TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME = 3600;
 
 export const ROOM_STATUSES = {
   BUSY: 'busy',
