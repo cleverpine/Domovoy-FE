@@ -16,19 +16,19 @@ $myImage: '../images/forest-background.png';
   display: flex;
   flex: 1;
   flex-direction: column;
+  margin-top: 100px;
   justify-content: center;
   align-items: center;
   color: $light;
 }
 
 .number {
-  height: 520px;
   align-content: center;
   font-weight: 600;
-  font-size: 500px;
+  font-size: 520px;
   color: $silver;
   opacity: 0.8;
-  margin-top: -110px;
+  margin-top: -100px;
 }
 
 .right-side {
@@ -44,7 +44,6 @@ $myImage: '../images/forest-background.png';
   width: 350px;
   height: 500px;
   padding: 20px;
-  margin-right: 30px;
   margin-bottom: 30px;
   border-radius: 10px;
   background-color: $silver;
