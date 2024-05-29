@@ -1,37 +1,64 @@
 import { useMsal } from '@azure/msal-react';
 import { format, isWithinInterval } from "date-fns";
 import { useEffect, useState } from 'react';
-
 import { graphConfig, loginRequest } from "../config/authConfig";
-import { AVAILABILITY_VIEW_INTERVAL, DATE_PATTERN, FETCH_INTERVAL, OVERLAY_STYLES, ROOM_STATUSES, TIMEZONE, TIME_UPDATE_INTERVAL } from "../constants/home";
+import { AVAILABILITY_VIEW_INTERVAL, DATE_PATTERN, FETCH_CALENDAR_INTERVAL, FETCH_TOKEN_INTERVAL, OVERLAY_STYLES, ROOM_STATUSES, TIMEZONE, TIME_UPDATE_INTERVAL, TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME } from "../constants/home";
 import { roomEmailToNumberMap } from "../mappers/roomMapper";
 
 const HomePage = () => {
   const { instance, accounts, inProgress } = useMsal();
-
   const [currentTime, setCurrentTime] = useState(new Date());
   // all meetings for today
   const [todaysMeetings, setTodaysMeetings] = useState<any>([]);
   // meeting that is currently happening
   const [currentMeeting, setCurrentMeeting] = useState<any>(null);
   const [roomStatus, setRoomStatus] = useState<any>(null);
-  // holds color for current room status
+  // holds color for current room status overlay
   const [overlayStyles, setOverlayStyles] = useState<any>(null);
-  // meetings left until a starting soon meeting starts
+  // meetings left until a 'starting soon' status meeting starts
   const [startingSoonMeetingMinutes, setStartingSoonMeetingMinutes] = useState<number>(0);
-  // next meetings when the room is busy
+  // next meetings when the room is in status 'busy'
   const [busyRoomMeetings, setBusyRoomMeetings] = useState<any>([]);
+  const [token, setToken] = useState<string | null>(null);
 
-  // Fetch calendar data on initial load and then every 30 seconds
+  // Fetch token every 30 minutes
   useEffect(() => {
-    getCalendarData();
+    const acquireToken = () => {
+      if (accounts.length > 0) {
+        instance.acquireTokenSilent({
+          ...loginRequest,
+          account: accounts[0],
+          forceRefresh: true,
+          refreshTokenExpirationOffsetSeconds: TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME
+        }).then(response => {
+          setToken(response.accessToken);
+        }).catch((error: any) => {
+          console.log('Acquire token silent failed', error);
+        });
+      }
+    };
 
-    const timer = setInterval(() => {
-      getCalendarData();
-    }, FETCH_INTERVAL);
+    acquireToken();
 
-    return () => clearInterval(timer);
-  }, [accounts, inProgress, instance]);
+    const tokenTimer = setInterval(acquireToken, FETCH_TOKEN_INTERVAL);
+
+    return () => clearInterval(tokenTimer);
+  }, [accounts, instance, loginRequest]);
+
+  // Fetch calendar data every 30 seconds
+  useEffect(() => {
+    const fetchCalendarData = () => {
+      if (token) {
+        fetchCalendar(token);
+      }
+    };
+
+    fetchCalendarData();
+
+    const calendarTimer = setInterval(fetchCalendarData, FETCH_CALENDAR_INTERVAL);
+
+    return () => clearInterval(calendarTimer);
+  }, [token]);
 
   // Update current time every second
   useEffect(() => {
@@ -43,7 +70,7 @@ const HomePage = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // check meeting status every second
+  // Check meeting status every second
   useEffect(() => {
     const timer = setInterval(() => {
       if (todaysMeetings) {
@@ -53,19 +80,6 @@ const HomePage = () => {
 
     return () => clearInterval(timer);
   }, [todaysMeetings]);
-
-  const getCalendarData = () => {
-    if (inProgress === "none" && accounts.length > 0) {
-      instance.acquireTokenSilent({
-        ...loginRequest,
-        account: accounts[0],
-      }).then(response => {
-        fetchCalendar(response.accessToken);
-      }).catch(() => {
-        instance.acquireTokenRedirect(loginRequest);
-      });
-    }
-  }
 
   const fetchCalendar = async (token: any) => {
     const now = new Date();
