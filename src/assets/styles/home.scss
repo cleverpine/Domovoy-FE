@@ -16,7 +16,7 @@ $myImage: '../images/forest-background.png';
   display: flex;
   flex: 1;
   flex-direction: column;
-  margin-top: 100px;
+  margin-top: 70px;
   justify-content: center;
   align-items: center;
   color: $light;
@@ -41,10 +41,11 @@ $myImage: '../images/forest-background.png';
 }
 
 .box {
-  width: 350px;
+  width: 330px;
   height: 500px;
   padding: 20px;
   margin-bottom: 30px;
+  margin-right: 20px;
   border-radius: 10px;
   background-color: $silver;
   opacity: 0.8;
