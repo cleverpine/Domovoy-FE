@@ -24,7 +24,7 @@ const HomePage = () => {
   // Fetch token every 30 minutes
   useEffect(() => {
     const acquireToken = () => {
-      if (accounts.length > 0) {
+      if (inProgress === "none" && accounts.length > 0) {
         instance.acquireTokenSilent({
           ...loginRequest,
           account: accounts[0],
