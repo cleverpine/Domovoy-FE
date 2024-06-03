@@ -1,4 +1,5 @@
 @import '../styles/colors.scss';
+$downArrow: '../images/down-arrow.svg';
 
 .login-container {
   height: 100vh;
@@ -21,7 +22,7 @@
 }
 
 .select-input-wrapper {
-  padding: 8px;
+  padding-bottom: 8px;
   border-bottom: 1px solid $dark;
   background-color: $light;
 }
@@ -30,7 +31,12 @@
   min-width: 120px;
   border: none;
   outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url(#{$downArrow});
+  background-repeat:no-repeat; 
+  background-position: 100%;
   font-size: 14px;
   color: $dark;
-  background-color: $light;
 }
