@@ -25,3 +25,5 @@ export const AVAILABLE_ROOMS_STYLES = {
   STARTING_SOON: 'starting-soon-room-wrapper',
   AVAILABLE: 'available-room-wrapper',
 };
+
+export const DATE_NOW = new Date();

@@ -1,15 +1,20 @@
 import { useMsal } from '@azure/msal-react';
 import { addMinutes, format, isWithinInterval } from "date-fns";
 import { useEffect, useState } from 'react';
-import { graphConfig, loginRequest } from "../config/authConfig";
-import { AVAILABILITY_VIEW_INTERVAL, AVAILABLE_ROOMS_INTERVAL, AVAILABLE_ROOMS_STYLES, DATE_PATTERN, FETCH_CALENDAR_INTERVAL, FETCH_TOKEN_INTERVAL, OVERLAY_STYLES, ROOM_STATUSES, TIMEZONE, TIME_UPDATE_INTERVAL, TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME } from "../constants/home";
-import { roomEmailToNumberMap } from "../mappers/roomMapper";
 
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+import { graphConfig, loginRequest } from "../config/authConfig";
+import { AVAILABILITY_VIEW_INTERVAL, AVAILABLE_ROOMS_INTERVAL, AVAILABLE_ROOMS_STYLES, DATE_NOW, DATE_PATTERN, FETCH_CALENDAR_INTERVAL, FETCH_TOKEN_INTERVAL, OVERLAY_STYLES, ROOM_STATUSES, TIMEZONE, TIME_UPDATE_INTERVAL, TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME } from "../constants/home";
+import { SELECTED_ROOM } from "../constants/login";
+import { fetchWithHeaders } from "../helpers/fetchHelper";
+import { roomEmailToNumberMap } from "../mappers/roomMapper";
+
 const HomePage = () => {
   const { instance, accounts, inProgress } = useMsal();
+
+  const [token, setToken] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   // all meetings for today
   const [todaysMeetings, setTodaysMeetings] = useState<any>([]);
@@ -23,13 +28,12 @@ const HomePage = () => {
   const [startingSoonMeetingMinutes, setStartingSoonMeetingMinutes] = useState<number>(0);
   // next meetings when the room is in status 'busy'
   const [busyRoomMeetings, setBusyRoomMeetings] = useState<any>([]);
-  const [token, setToken] = useState<string | null>(null);
   // all room schedules
-  const [schedules, setSchedules] = useState<any>([]);
+  const [schedules, setSchedules] = useState<any>(null);
   // available rooms for booking
-  const [availableRooms, setAvailableRooms] = useState<any>(null);
+  const [availableRooms, setAvailableRooms] = useState<string[] | null>(null);
   // selected room for booking
-  const [selectedOption, setSelectedOption] = useState('');
+  const [selectedOption, setSelectedOption] = useState<string>('');
 
   // Hide available rooms in 5 minutes
   useEffect(() => {
@@ -54,6 +58,7 @@ const HomePage = () => {
           refreshTokenExpirationOffsetSeconds: TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME
         }).then(response => {
           setToken(response.accessToken);
+          sessionStorage.setItem('token', response.accessToken);
         }).catch((error: any) => {
           console.log('Acquire token silent failed', error);
         });
@@ -70,6 +75,9 @@ const HomePage = () => {
   // Fetch calendar data every 30 seconds
   useEffect(() => {
     const fetchCalendarData = () => {
+      // handle refresh of page
+      setToken(sessionStorage.getItem('token'));
+
       if (token) {
         fetchCalendar();
       }
@@ -85,8 +93,7 @@ const HomePage = () => {
   // Update current time every second
   useEffect(() => {
     const timer = setInterval(() => {
-      const date = new Date();
-      setCurrentTime(date);
+      setCurrentTime(DATE_NOW);
     }, TIME_UPDATE_INTERVAL);
 
     return () => clearInterval(timer);
@@ -103,32 +110,27 @@ const HomePage = () => {
     return () => clearInterval(timer);
   }, [todaysMeetings]);
 
-  const fetchCalendar = async () => {
-    const now = new Date();
-    const preferredTimeZone = `outlook.timezone="${TIMEZONE}"`;
-    const daysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-    const formattedDateNow = format(now, DATE_PATTERN);
+  const fetchCalendarRequest = async () => {
+    const daysFromNow = new Date(DATE_NOW.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const formattedDateNow = format(DATE_NOW, DATE_PATTERN);
     const formattedDaysFromNow = format(daysFromNow, DATE_PATTERN);
 
-    const response = await fetch(graphConfig.graphCalendarEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Prefer': preferredTimeZone,
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        schedules: Object.keys(roomEmailToNumberMap),
-        startTime: { dateTime: formattedDateNow, TIMEZONE },
-        endTime: { dateTime: formattedDaysFromNow, TIMEZONE },
-        AVAILABILITY_VIEW_INTERVAL,
-      })
-    });
+    const body = {
+      schedules: Object.keys(roomEmailToNumberMap),
+      startTime: { dateTime: formattedDateNow, TIMEZONE },
+      endTime: { dateTime: formattedDaysFromNow, TIMEZONE },
+      AVAILABILITY_VIEW_INTERVAL,
+    };
 
-    const data = await response.json();
+    const response = await fetchWithHeaders(graphConfig.graphCalendarEndpoint, token, body);
+
+    return response.json();
+  }
+
+  const fetchCalendar = async () => {
+    const data = await fetchCalendarRequest();
     setSchedules(data.value);
-    const selectedRoomEmail = sessionStorage.getItem('selectedRoom');
+    const selectedRoomEmail = sessionStorage.getItem(SELECTED_ROOM);
     const selectedRoomNumber = roomEmailToNumberMap[selectedRoomEmail!];
 
     getCurrentRoomSchedule(data, selectedRoomNumber);
@@ -152,15 +154,13 @@ const HomePage = () => {
   };
 
   const calculateDifferenceInMinutes = (timestamp: string) => {
-    const now = new Date();
     const givenDate = new Date(timestamp);
-    const differenceInMillis = givenDate.getTime() - now.getTime();
+    const differenceInMillis = givenDate.getTime() - DATE_NOW.getTime();
     const differenceInMinutes = Math.floor(differenceInMillis / (1000 * 60));
     return differenceInMinutes + 1;
   };
 
   const checkMeetingStatus = (roomSchedules: any) => {
-    const now = new Date();
     let status = ROOM_STATUSES.AVAILABLE;
     let ongoingMeeting = null;
 
@@ -169,7 +169,7 @@ const HomePage = () => {
       const meetingEnd = new Date(meeting.end.dateTime);
       const adjustedMeetingEnd = addMinutes(meetingEnd, 1);
 
-      if (isWithinInterval(now, { start: meetingStart, end: adjustedMeetingEnd })) {
+      if (isWithinInterval(DATE_NOW, { start: meetingStart, end: adjustedMeetingEnd })) {
         status = ROOM_STATUSES.BUSY;
         ongoingMeeting = meeting;
         break;
@@ -216,13 +216,12 @@ const HomePage = () => {
   }
 
   const isSameDate = (date: Date) => {
-    const now = new Date();
     const givenDate = new Date(date);
 
     return (
-      now.getFullYear() === givenDate.getFullYear() &&
-      now.getMonth() === givenDate.getMonth() &&
-      now.getDate() === givenDate.getDate()
+      DATE_NOW.getFullYear() === givenDate.getFullYear() &&
+      DATE_NOW.getMonth() === givenDate.getMonth() &&
+      DATE_NOW.getDate() === givenDate.getDate()
     );
   };
 
@@ -242,8 +241,13 @@ const HomePage = () => {
     const currentRoomNumber = +currentRoom
     const excludedRoomNumber = +excludedRoom;
 
-    // Filter out the available rooms
-    let availableRooms = scheduleResponse
+    const availableRooms = filterAvailableRooms(scheduleResponse, nextTenMinutes, excludedRoomNumber);
+
+    return sortRoomsBasedOnDistance(availableRooms, currentRoomNumber);
+  };
+
+  const filterAvailableRooms = (scheduleResponse: any, nextTenMinutes: Date, excludedRoomNumber: number) => {
+    return scheduleResponse
       .filter((room: any) => {
         const roomNumber = +roomEmailToNumberMap[room.scheduleId];
         return roomNumber !== excludedRoomNumber;
@@ -251,18 +255,17 @@ const HomePage = () => {
         // return roomNumber;
       })
       .filter((room: any) => checkRoomAvailability(room.scheduleItems, nextTenMinutes));
+  }
 
-    // Sort the remaining rooms based on their distance from the current room
-    availableRooms.sort((a: any, b: any) => {
+  const sortRoomsBasedOnDistance = (availableRooms: any, currentRoomNumber: number) => {
+    return availableRooms.sort((a: any, b: any) => {
       const roomNumberA = +roomEmailToNumberMap[a.scheduleId];
       const roomNumberB = +roomEmailToNumberMap[b.scheduleId];
       const distanceA = Math.abs(roomNumberA - currentRoomNumber);
       const distanceB = Math.abs(roomNumberB - currentRoomNumber);
       return distanceA - distanceB;
     });
-
-    return availableRooms;
-  };
+  }
 
   const checkRoomAvailability = (scheduleItems: any, nextTenMinutes: Date) => {
     return scheduleItems.every((item: any) => {
@@ -272,54 +275,67 @@ const HomePage = () => {
     });
   };
 
-  const seeAvailableRooms = () => {
+  const seeAvailableRooms = async () => {
+    const data = await fetchCalendarRequest();
+    setSchedules(data.value);
+
     // check for 15 mins in order to include the time while considering booking the room
-    const nextTenMinutes = new Date(currentTime.getTime() + 15 * 60000);
+    const nextFifteenMinutes = new Date(currentTime.getTime() + 15 * 60000);
+    const currentRoom = roomEmailToNumberMap[sessionStorage.getItem(SELECTED_ROOM)!]
     // TODO excluded room will be deleted later
-    const currentRoom = roomEmailToNumberMap[sessionStorage.getItem('selectedRoom')!]
-    const availableRooms = getAvailableRooms(schedules, nextTenMinutes, currentRoom, "404");
+    const availableRooms = getAvailableRooms(data.value, nextFifteenMinutes, currentRoom, "404");
     const roomsWithEmpty = availableRooms.map((room: any) => room.scheduleId);
+
+    if (roomsWithEmpty.length === 0) {
+      toast.error(`No available rooms for the next 10 minutes!`);
+      setAvailableRooms(null);
+      setSelectedOption('');
+      return;
+    }
 
     setAvailableRooms(roomsWithEmpty);
     setSelectedOption(roomsWithEmpty[0]);
   }
 
-  const scheduleMeeting = async (chosenRoomEmail: string): Promise<any> => {
+  const scheduleMeeting = async (): Promise<any> => {
     const nextTenMinutes = new Date(currentTime.getTime() + 10 * 60000);
     const now = format(currentTime, DATE_PATTERN);
     const tenMinutesLater = format(nextTenMinutes, DATE_PATTERN);
-    const preferredTimeZone = `outlook.timezone="${TIMEZONE}"`;
+
+    const data = await fetchCalendarRequest();
+    setSchedules(data.value);
+
+    const chosenRoomSchedule = data.value.find((room: any) => room.scheduleId === selectedOption);
+    if (!checkRoomAvailability(chosenRoomSchedule.scheduleItems, nextTenMinutes)) {
+      toast.error(`Room ${roomEmailToNumberMap[selectedOption]} is not available anymore! Please choose another room.`);
+      setAvailableRooms(null);
+      setSelectedOption('');
+      return;
+    }
 
     try {
-      const response = await fetch(graphConfig.graphScheduleMeetingEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          Authorization: `Bearer ${token}`,
-          'Prefer': preferredTimeZone,
+      const body = {
+        subject: 'System Rooms',
+        start: {
+          dateTime: now,
+          timeZone: TIMEZONE
         },
-        body: JSON.stringify({
-          subject: 'System Rooms',
-          start: {
-            dateTime: now,
-            timeZone: TIMEZONE
-          },
-          end: {
-            dateTime: tenMinutesLater,
-            timeZone: TIMEZONE
-          },
-          attendees: [
-            {
-              emailAddress: {
-                address: chosenRoomEmail,
-                name: roomEmailToNumberMap[chosenRoomEmail],
-              },
-              type: 'resource',
-            }
-          ],
-        })
-      });
+        end: {
+          dateTime: tenMinutesLater,
+          timeZone: TIMEZONE
+        },
+        attendees: [
+          {
+            emailAddress: {
+              address: selectedOption,
+              name: roomEmailToNumberMap[selectedOption],
+            },
+            type: 'resource',
+          }
+        ],
+      };
+
+      const response = await fetchWithHeaders(graphConfig.graphScheduleMeetingEndpoint, token, body);
 
       const data = await response.json();
 
@@ -349,7 +365,7 @@ const HomePage = () => {
     });
   };
 
-  if (!sessionStorage.getItem('selectedRoom')) {
+  if (!sessionStorage.getItem(SELECTED_ROOM)) {
     handleLogout();
     return <></>;
   }
@@ -386,7 +402,7 @@ const HomePage = () => {
             }
           })()}
           <div className={`select-input-wrapper-home ${availableRoomsStyles}`}>
-            <button onClick={seeAvailableRooms} className="available-rooms-btn">See available rooms</button>
+            <button onClick={seeAvailableRooms} className="available-rooms-btn" disabled={!schedules}>See available rooms</button>
             {availableRooms && <div className="book-room-wrapper">
               <select value={selectedOption} id="roomSelect" className="available-rooms-select-input" onChange={onSelectRoomChange}>
                 {availableRooms.map((room: string, index: number) => (
@@ -395,7 +411,7 @@ const HomePage = () => {
                   </option>
                 ))}
               </select>
-              <button onClick={() => scheduleMeeting(selectedOption)} className="available-rooms-btn">Book room for 10 minutes</button>
+              <button onClick={scheduleMeeting} className="available-rooms-btn">Book room for 10 minutes</button>
             </div>
             }
           </div>
@@ -406,8 +422,8 @@ const HomePage = () => {
         <div className="content-container">
           <div className="left-side">
             {
-              sessionStorage.getItem('selectedRoom') ?
-                roomEmailToNumberMap[sessionStorage.getItem('selectedRoom')!].split('').map((number: string, index: number) => (
+              sessionStorage.getItem(SELECTED_ROOM) ?
+                roomEmailToNumberMap[sessionStorage.getItem(SELECTED_ROOM)!].split('').map((number: string, index: number) => (
                   <div key={index} className="number">{number}</div>
                 )) : ''
             }
