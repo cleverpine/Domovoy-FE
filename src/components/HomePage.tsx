@@ -279,11 +279,11 @@ const HomePage = () => {
     const data = await fetchCalendarRequest();
     setSchedules(data.value);
 
-    // check for 15 mins in order to include the time while considering booking the room
-    const nextFifteenMinutes = new Date(currentTime.getTime() + 15 * 60000);
+    // check for 10 mins in order to include the time while considering booking the room
+    const nextTenMinutes = new Date(currentTime.getTime() + 10 * 60000);
     const currentRoom = roomEmailToNumberMap[sessionStorage.getItem(SELECTED_ROOM)!]
     // TODO excluded room will be deleted later
-    const availableRooms = getAvailableRooms(data.value, nextFifteenMinutes, currentRoom, "404");
+    const availableRooms = getAvailableRooms(data.value, nextTenMinutes, currentRoom, "404");
     const roomsWithEmpty = availableRooms.map((room: any) => room.scheduleId);
 
     if (roomsWithEmpty.length === 0) {
