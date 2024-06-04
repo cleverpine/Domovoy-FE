@@ -15,6 +15,6 @@ export const loginRequest = {
 };
 
 export const graphConfig = {
-  graphMeEndpoint: 'https://graph.microsoft.com/v1.0/me',
   graphCalendarEndpoint: 'https://graph.microsoft.com/v1.0/me/calendar/getSchedule',
+  graphScheduleMeetingEndpoint: 'https://graph.microsoft.com/v1.0/me/events'
 };

@@ -4,6 +4,7 @@ export const AVAILABILITY_VIEW_INTERVAL = 30;
 export const FETCH_CALENDAR_INTERVAL = 30000;
 export const FETCH_TOKEN_INTERVAL = 1800000;
 export const TIME_UPDATE_INTERVAL = 1000;
+export const AVAILABLE_ROOMS_INTERVAL = 300000;
 // in seconds
 export const TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME = 3600;
 
@@ -18,3 +19,11 @@ export const OVERLAY_STYLES = {
   STARTING_SOON: 'starting-soon-overlay',
   AVAILABLE: 'available-overlay',
 };
+
+export const AVAILABLE_ROOMS_STYLES = {
+  BUSY: 'busy-room-wrapper',
+  STARTING_SOON: 'starting-soon-room-wrapper',
+  AVAILABLE: 'available-room-wrapper',
+};
+
+export const DATE_NOW = new Date();

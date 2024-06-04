@@ -1,4 +1,5 @@
 $myImage: '../images/forest-background.png';
+$downArrow: '../images/down-arrow.svg';
 @import '../styles/colors.scss';
 
 .container {
@@ -152,7 +153,7 @@ $myImage: '../images/forest-background.png';
 
 .available-room {
   position: absolute;
-  right: 50px;
+  right: 30px;
   top: 200px;
   font-size: 40px;
   font-weight: 500;
@@ -174,4 +175,52 @@ $myImage: '../images/forest-background.png';
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.select-input-wrapper-home {
+  position: absolute;
+  right: 30px;
+  top: 280px;
+  min-width: 250px;
+  display: flex;
+  gap: 10px;
+  flex-direction: column;
+  color: $light;
+  font-weight: bold;
+}
+
+.starting-soon-room-wrapper, .busy-room-wrapper {
+  top: 320px;
+}
+
+.available-room-wrapper {
+  top: 280px;
+}
+
+.available-rooms-btn {
+  padding: 10px 20px;
+  font-size: 18px;
+  background: $silver;
+  border: 1px solid $silver;
+  border-radius: 10px;
+}
+
+.book-room-wrapper {
+  display: flex;
+  gap: 10px;
+  flex-direction: column;
+}
+
+.available-rooms-select-input {
+  padding: 10px;
+  border: none;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url(#{$downArrow});
+  background-repeat:no-repeat; 
+  background-position:calc(100% - 10px);
+  font-size: 14px;
+  color: $dark;
 }
