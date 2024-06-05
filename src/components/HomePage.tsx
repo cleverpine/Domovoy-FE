@@ -6,7 +6,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import { graphConfig, loginRequest } from "../config/authConfig";
-import { AVAILABILITY_VIEW_INTERVAL, AVAILABLE_ROOMS_INTERVAL, AVAILABLE_ROOMS_STYLES, DATE_NOW, DATE_PATTERN, FETCH_CALENDAR_INTERVAL, OVERLAY_STYLES, ROOM_STATUSES, TIMEZONE, TIME_UPDATE_INTERVAL, TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME } from "../constants/home";
+import { AVAILABILITY_VIEW_INTERVAL, AVAILABLE_ROOMS_INTERVAL, AVAILABLE_ROOMS_STYLES, DATE_PATTERN, FETCH_CALENDAR_INTERVAL, OVERLAY_STYLES, ROOM_STATUSES, TIMEZONE, TIME_UPDATE_INTERVAL, TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME } from "../constants/home";
 import { SELECTED_ROOM } from "../constants/login";
 import { fetchWithHeaders } from "../helpers/fetchHelper";
 import { roomEmailToNumberMap } from "../mappers/roomMapper";
@@ -57,6 +57,8 @@ const HomePage = () => {
       }).then((response: any) => {
         setToken(response.accessToken);
         fetchCalendar(response.accessToken);
+        console.log('here');
+
       }).catch((error: any) => {
         console.log('Acquire token silent failed', error);
       });
@@ -75,7 +77,8 @@ const HomePage = () => {
   // Update current time every second
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentTime(DATE_NOW);
+      const now = new Date();
+      setCurrentTime(now);
     }, TIME_UPDATE_INTERVAL);
 
     return () => clearInterval(timer);
@@ -93,8 +96,9 @@ const HomePage = () => {
   }, [todaysMeetings]);
 
   const fetchCalendarRequest = async (token: string) => {
-    const daysFromNow = new Date(DATE_NOW.getTime() + 3 * 24 * 60 * 60 * 1000);
-    const formattedDateNow = format(DATE_NOW, DATE_PATTERN);
+    const now = new Date();
+    const daysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const formattedDateNow = format(now, DATE_PATTERN);
     const formattedDaysFromNow = format(daysFromNow, DATE_PATTERN);
 
     const body = {
@@ -138,13 +142,15 @@ const HomePage = () => {
   };
 
   const calculateDifferenceInMinutes = (timestamp: string) => {
+    const now = new Date();
     const givenDate = new Date(timestamp);
-    const differenceInMillis = givenDate.getTime() - DATE_NOW.getTime();
+    const differenceInMillis = givenDate.getTime() - now.getTime();
     const differenceInMinutes = Math.floor(differenceInMillis / (1000 * 60));
     return differenceInMinutes + 1;
   };
 
   const checkMeetingStatus = (roomSchedules: any) => {
+    const now = new Date();
     let status = ROOM_STATUSES.AVAILABLE;
     let ongoingMeeting = null;
 
@@ -153,7 +159,7 @@ const HomePage = () => {
       const meetingEnd = new Date(meeting.end.dateTime);
       const adjustedMeetingEnd = addMinutes(meetingEnd, 1);
 
-      if (isWithinInterval(DATE_NOW, { start: meetingStart, end: adjustedMeetingEnd })) {
+      if (isWithinInterval(now, { start: meetingStart, end: adjustedMeetingEnd })) {
         status = ROOM_STATUSES.BUSY;
         ongoingMeeting = meeting;
         break;
@@ -200,12 +206,13 @@ const HomePage = () => {
   }
 
   const isSameDate = (date: Date) => {
+    const now = new Date();
     const givenDate = new Date(date);
 
     return (
-      DATE_NOW.getFullYear() === givenDate.getFullYear() &&
-      DATE_NOW.getMonth() === givenDate.getMonth() &&
-      DATE_NOW.getDate() === givenDate.getDate()
+      now.getFullYear() === givenDate.getFullYear() &&
+      now.getMonth() === givenDate.getMonth() &&
+      now.getDate() === givenDate.getDate()
     );
   };
 

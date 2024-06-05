@@ -34,6 +34,7 @@ $downArrow: '../images/down-arrow.svg';
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
+  background-color: $light;
   background-image: url(#{$downArrow});
   background-repeat:no-repeat; 
   background-position: 100%;
