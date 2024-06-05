@@ -1,6 +1,6 @@
 import { TIMEZONE } from "../constants/home";
 
-export const fetchWithHeaders = async (url: string, token: string | null, body: object) => {
+export const fetchWithHeaders = async (url: string, token: string, body: object) => {
   const preferredTimeZone = `outlook.timezone="${TIMEZONE}"`;
 
   return await fetch(url, {

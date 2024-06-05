@@ -6,7 +6,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import { graphConfig, loginRequest } from "../config/authConfig";
-import { AVAILABILITY_VIEW_INTERVAL, AVAILABLE_ROOMS_INTERVAL, AVAILABLE_ROOMS_STYLES, DATE_NOW, DATE_PATTERN, FETCH_CALENDAR_INTERVAL, FETCH_TOKEN_INTERVAL, OVERLAY_STYLES, ROOM_STATUSES, TIMEZONE, TIME_UPDATE_INTERVAL, TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME } from "../constants/home";
+import { AVAILABILITY_VIEW_INTERVAL, AVAILABLE_ROOMS_INTERVAL, AVAILABLE_ROOMS_STYLES, DATE_NOW, DATE_PATTERN, FETCH_CALENDAR_INTERVAL, OVERLAY_STYLES, ROOM_STATUSES, TIMEZONE, TIME_UPDATE_INTERVAL, TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME } from "../constants/home";
 import { SELECTED_ROOM } from "../constants/login";
 import { fetchWithHeaders } from "../helpers/fetchHelper";
 import { roomEmailToNumberMap } from "../mappers/roomMapper";
@@ -14,7 +14,7 @@ import { roomEmailToNumberMap } from "../mappers/roomMapper";
 const HomePage = () => {
   const { instance, accounts, inProgress } = useMsal();
 
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string>('');
   const [currentTime, setCurrentTime] = useState(new Date());
   // all meetings for today
   const [todaysMeetings, setTodaysMeetings] = useState<any>([]);
@@ -47,48 +47,30 @@ const HomePage = () => {
     }
   }, [availableRooms]);
 
-  // Fetch token every 30 minutes
-  useEffect(() => {
-    const acquireToken = () => {
-      if (inProgress === "none" && accounts.length > 0) {
-        instance.acquireTokenSilent({
-          ...loginRequest,
-          account: accounts[0],
-          forceRefresh: true,
-          refreshTokenExpirationOffsetSeconds: TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME
-        }).then(response => {
-          setToken(response.accessToken);
-          sessionStorage.setItem('token', response.accessToken);
-        }).catch((error: any) => {
-          console.log('Acquire token silent failed', error);
-        });
-      }
-    };
+  const acquireToken = () => {
+    if (inProgress === "none" && accounts.length > 0) {
+      instance.acquireTokenSilent({
+        ...loginRequest,
+        account: accounts[0],
+        forceRefresh: true,
+        refreshTokenExpirationOffsetSeconds: TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME
+      }).then((response: any) => {
+        setToken(response.accessToken);
+        fetchCalendar(response.accessToken);
+      }).catch((error: any) => {
+        console.log('Acquire token silent failed', error);
+      });
+    }
+  };
 
+  // Fetch token & calendar every 30 minutes
+  useEffect(() => {
     acquireToken();
 
-    const tokenTimer = setInterval(acquireToken, FETCH_TOKEN_INTERVAL);
+    const tokenTimer = setInterval(acquireToken, FETCH_CALENDAR_INTERVAL);
 
     return () => clearInterval(tokenTimer);
   }, [accounts, instance, loginRequest]);
-
-  // Fetch calendar data every 30 seconds
-  useEffect(() => {
-    const fetchCalendarData = () => {
-      // handle refresh of page
-      setToken(sessionStorage.getItem('token'));
-
-      if (token) {
-        fetchCalendar();
-      }
-    };
-
-    fetchCalendarData();
-
-    const calendarTimer = setInterval(fetchCalendarData, FETCH_CALENDAR_INTERVAL);
-
-    return () => clearInterval(calendarTimer);
-  }, [token]);
 
   // Update current time every second
   useEffect(() => {
@@ -110,7 +92,7 @@ const HomePage = () => {
     return () => clearInterval(timer);
   }, [todaysMeetings]);
 
-  const fetchCalendarRequest = async () => {
+  const fetchCalendarRequest = async (token: string) => {
     const daysFromNow = new Date(DATE_NOW.getTime() + 3 * 24 * 60 * 60 * 1000);
     const formattedDateNow = format(DATE_NOW, DATE_PATTERN);
     const formattedDaysFromNow = format(daysFromNow, DATE_PATTERN);
@@ -127,8 +109,8 @@ const HomePage = () => {
     return response.json();
   }
 
-  const fetchCalendar = async () => {
-    const data = await fetchCalendarRequest();
+  const fetchCalendar = async (token: string) => {
+    const data = await fetchCalendarRequest(token);
     setSchedules(data.value);
     const selectedRoomEmail = sessionStorage.getItem(SELECTED_ROOM);
     const selectedRoomNumber = roomEmailToNumberMap[selectedRoomEmail!];
@@ -137,10 +119,12 @@ const HomePage = () => {
   }
 
   const getCurrentRoomSchedule = (data: any, selectedRoomNumber: string) => {
-    const roomSchedule = data && data.value.find((element: any) => element.scheduleId.includes(selectedRoomNumber));
+    if (data && data.value) {
+      const roomSchedule = data.value.find((element: any) => element.scheduleId.includes(selectedRoomNumber));
 
-    if (roomSchedule) {
-      filterTodaysMeetings(roomSchedule.scheduleItems);
+      if (roomSchedule) {
+        filterTodaysMeetings(roomSchedule.scheduleItems);
+      }
     }
   }
 
@@ -276,7 +260,7 @@ const HomePage = () => {
   };
 
   const seeAvailableRooms = async () => {
-    const data = await fetchCalendarRequest();
+    const data = await fetchCalendarRequest(token);
     setSchedules(data.value);
 
     // check for 10 mins in order to include the time while considering booking the room
@@ -302,7 +286,7 @@ const HomePage = () => {
     const now = format(currentTime, DATE_PATTERN);
     const tenMinutesLater = format(nextTenMinutes, DATE_PATTERN);
 
-    const data = await fetchCalendarRequest();
+    const data = await fetchCalendarRequest(token);
     setSchedules(data.value);
 
     const chosenRoomSchedule = data.value.find((room: any) => room.scheduleId === selectedOption);
