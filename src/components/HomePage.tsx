@@ -2,14 +2,19 @@ import { useMsal } from '@azure/msal-react';
 import { addMinutes, format, isWithinInterval } from "date-fns";
 import { useEffect, useState } from 'react';
 
+import { Box, Button, List, ListItem, ListItemButton, Modal, Typography } from '@mui/material';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+
+import { faCalendarPlus, faX } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import { graphConfig, loginRequest } from "../config/authConfig";
 import { AVAILABILITY_VIEW_INTERVAL, AVAILABLE_ROOMS_INTERVAL, AVAILABLE_ROOMS_STYLES, DATE_PATTERN, FETCH_CALENDAR_INTERVAL, OVERLAY_STYLES, ROOM_STATUSES, TIMEZONE, TIME_UPDATE_INTERVAL, TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME } from "../constants/home";
 import { SELECTED_ROOM } from "../constants/login";
 import { fetchWithHeaders } from "../helpers/fetchHelper";
 import { roomEmailToNumberMap } from "../mappers/roomMapper";
+
 
 const HomePage = () => {
   const { instance, accounts, inProgress } = useMsal();
@@ -34,6 +39,9 @@ const HomePage = () => {
   const [availableRooms, setAvailableRooms] = useState<string[] | null>(null);
   // selected room for booking
   const [selectedOption, setSelectedOption] = useState<string>('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  // room interval for booking
+  const [availableRoomInterval, setAvailableRoomInterval] = useState<any>(null);
 
   // Hide available rooms in 5 minutes
   useEffect(() => {
@@ -41,6 +49,7 @@ const HomePage = () => {
       const timer = setTimeout(() => {
         setAvailableRooms(null);
         setSelectedOption('');
+        setIsModalOpen(false);
       }, AVAILABLE_ROOMS_INTERVAL);
 
       return () => clearTimeout(timer);
@@ -57,8 +66,6 @@ const HomePage = () => {
       }).then((response: any) => {
         setToken(response.accessToken);
         fetchCalendar(response.accessToken);
-        console.log('here');
-
       }).catch((error: any) => {
         console.log('Acquire token silent failed', error);
       });
@@ -228,28 +235,28 @@ const HomePage = () => {
     }).format(date);
   };
 
-  const getAvailableRooms = (scheduleResponse: any, nextTenMinutes: Date, currentRoom: string, excludedRoom: string) => {
+  const getAvailableRooms = (scheduleResponse: any, currentRoom: string, excludedRoom: string) => {
     const currentRoomNumber = +currentRoom
     const excludedRoomNumber = +excludedRoom;
 
-    const availableRooms = filterAvailableRooms(scheduleResponse, nextTenMinutes, excludedRoomNumber);
+    const availableRooms = filterAvailableRooms(scheduleResponse, excludedRoomNumber);
 
     return sortRoomsBasedOnDistance(availableRooms, currentRoomNumber);
   };
 
-  const filterAvailableRooms = (scheduleResponse: any, nextTenMinutes: Date, excludedRoomNumber: number) => {
-    return scheduleResponse
+  const filterAvailableRooms = (scheduleResponse: any, excludedRoomNumber: number) => {
+    return scheduleResponse && scheduleResponse
       .filter((room: any) => {
         const roomNumber = +roomEmailToNumberMap[room.scheduleId];
-        return roomNumber !== excludedRoomNumber;
+        // return roomNumber !== excludedRoomNumber;
         // TODO change to return roomNumber when 404 room does not exist anymore
-        // return roomNumber;
+        return roomNumber;
       })
-      .filter((room: any) => checkRoomAvailability(room.scheduleItems, nextTenMinutes));
+      .filter((room: any) => checkRoomAvailability(room.scheduleItems));
   }
 
   const sortRoomsBasedOnDistance = (availableRooms: any, currentRoomNumber: number) => {
-    return availableRooms.sort((a: any, b: any) => {
+    return availableRooms && availableRooms.sort((a: any, b: any) => {
       const roomNumberA = +roomEmailToNumberMap[a.scheduleId];
       const roomNumberB = +roomEmailToNumberMap[b.scheduleId];
       const distanceA = Math.abs(roomNumberA - currentRoomNumber);
@@ -258,26 +265,29 @@ const HomePage = () => {
     });
   }
 
-  const checkRoomAvailability = (scheduleItems: any, nextTenMinutes: Date) => {
+  const checkRoomAvailability = (scheduleItems: any) => {
+    const now = format(currentTime, DATE_PATTERN);
+    const endTime = getEndTime(now);
+
     return scheduleItems.every((item: any) => {
       const start = new Date(item.start.dateTime);
       const end = new Date(item.end.dateTime);
-      return !(start < nextTenMinutes && end > currentTime);
+
+      return !(start < endTime && end > currentTime);
     });
   };
 
   const seeAvailableRooms = async () => {
     const data = await fetchCalendarRequest(token);
+
     setSchedules(data.value);
 
-    // check for 10 mins in order to include the time while considering booking the room
-    const nextTenMinutes = new Date(currentTime.getTime() + 10 * 60000);
     const currentRoom = roomEmailToNumberMap[sessionStorage.getItem(SELECTED_ROOM)!]
     // TODO excluded room will be deleted later
-    const availableRooms = getAvailableRooms(data.value, nextTenMinutes, currentRoom, "404");
-    const roomsWithEmpty = availableRooms.map((room: any) => room.scheduleId);
+    const availableRooms = getAvailableRooms(data.value, currentRoom, "404");
+    const roomsWithEmpty = availableRooms && availableRooms.map((room: any) => room.scheduleId);
 
-    if (roomsWithEmpty.length === 0) {
+    if (roomsWithEmpty && roomsWithEmpty.length === 0) {
       toast.error(`No available rooms for the next 10 minutes!`);
       setAvailableRooms(null);
       setSelectedOption('');
@@ -285,24 +295,29 @@ const HomePage = () => {
     }
 
     setAvailableRooms(roomsWithEmpty);
-    setSelectedOption(roomsWithEmpty[0]);
+    setSelectedOption(roomsWithEmpty && roomsWithEmpty[0]);
+    setIsModalOpen(true);
   }
 
-  const scheduleMeeting = async (): Promise<any> => {
-    const nextTenMinutes = new Date(currentTime.getTime() + 10 * 60000);
+  const handleRoomSelect = (room: string) => {
+    scheduleMeeting(room);
+  };
+
+  const scheduleMeeting = async (selectedRoom: string): Promise<any> => {
     const now = format(currentTime, DATE_PATTERN);
-    const tenMinutesLater = format(nextTenMinutes, DATE_PATTERN);
 
     const data = await fetchCalendarRequest(token);
     setSchedules(data.value);
 
-    const chosenRoomSchedule = data.value.find((room: any) => room.scheduleId === selectedOption);
-    if (!checkRoomAvailability(chosenRoomSchedule.scheduleItems, nextTenMinutes)) {
-      toast.error(`Room ${roomEmailToNumberMap[selectedOption]} is not available anymore! Please choose another room.`);
+    const chosenRoomSchedule = data.value.find((room: any) => room.scheduleId === selectedRoom);
+    if (!checkRoomAvailability(chosenRoomSchedule.scheduleItems)) {
+      toast.error(`Room ${roomEmailToNumberMap[selectedRoom]} is not available anymore! Please choose another room.`);
       setAvailableRooms(null);
       setSelectedOption('');
       return;
     }
+
+    const formattedEndTime = getEndTime(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     try {
       const body = {
@@ -312,7 +327,7 @@ const HomePage = () => {
           timeZone: TIMEZONE
         },
         end: {
-          dateTime: tenMinutesLater,
+          dateTime: formattedEndTime,
           timeZone: TIMEZONE
         },
         attendees: [
@@ -335,10 +350,11 @@ const HomePage = () => {
         throw new Error(data.error.message);
       }
 
-      toast.success(`Meeting for 10 minutes scheduled in Room ${roomEmailToNumberMap[selectedOption]}!`);
+      toast.success(`Meeting successfully scheduled in Room ${roomEmailToNumberMap[selectedOption]}!`);
 
       setAvailableRooms(null);
       setSelectedOption('');
+      setIsModalOpen(false);
       return data;
     } catch (error: any) {
       toast.error(`Failed to schedule meeting: ${error.message}`);
@@ -346,9 +362,50 @@ const HomePage = () => {
     }
   }
 
-  const onSelectRoomChange = (event: any) => {
-    setSelectedOption(event.target.value);
-  }
+  const getNearestTenMinuteMark = (currentMinutes: number) => {
+    let nearestTenMinuteMark = Math.ceil(currentMinutes / 10) * 10;
+
+    if (nearestTenMinuteMark - currentMinutes <= 6) {
+      nearestTenMinuteMark += 10;
+    }
+
+    return nearestTenMinuteMark;
+  };
+
+  const adjustEndTime = (date: Date, nearestTenMinuteMark: number) => {
+    let endTime = new Date(date);
+
+    if (nearestTenMinuteMark === 60) {
+      endTime.setHours(endTime.getHours() + 1);
+      endTime.setMinutes(0);
+    } else {
+      endTime.setMinutes(nearestTenMinuteMark);
+    }
+
+    if (endTime <= date) {
+      endTime.setMinutes(endTime.getMinutes() + 10);
+    }
+    return endTime;
+  };
+
+  const formatMinutes = (minutes: number) => {
+    return minutes.toString().padStart(2, '0');
+  };
+
+  const getEndTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const currentMinutes = date.getMinutes();
+
+    const nearestTenMinuteMark = getNearestTenMinuteMark(currentMinutes);
+    const endTime = adjustEndTime(date, nearestTenMinuteMark);
+
+    const startTimeMins = formatMinutes(date.getMinutes());
+    const endTimeMins = formatMinutes(endTime.getMinutes());
+
+    setAvailableRoomInterval(`${date.getHours()}:${startTimeMins} - ${endTime.getHours()}:${endTimeMins}`);
+
+    return endTime;
+  };
 
   const handleLogout = () => {
     instance.logoutRedirect().catch(e => {
@@ -365,95 +422,109 @@ const HomePage = () => {
     <div>
       <div className="container">
         <div className="time-container">
-          <p className="time">{formatTime(currentTime)}</p>
+          <Typography className="typography time">{formatTime(currentTime)}</Typography>
           {(() => {
             switch (roomStatus) {
               case ROOM_STATUSES.BUSY:
                 return (
-                  <div className="current-meeting-information">
-                    <div className="current-meeting-duration">
-                      <p className="current-meeting-duration-info">{formatMeetingsTime(currentMeeting.start.dateTime)}</p>
-                      <p className="current-meeting-duration-info">-</p>
-                      <p className="current-meeting-duration-info">{formatMeetingsTime(currentMeeting.end.dateTime)}</p>
-                    </div>
-                    <p className="current-meeting-owner">{currentMeeting.subject.trim()}'s meeting</p>
-                  </div>
+                  <Box className="current-meeting-information">
+                    <Box className="current-meeting-duration">
+                      <Typography variant="h4" className="typography current-meeting-duration-info">{formatMeetingsTime(currentMeeting.start.dateTime)}</Typography>
+                      <Typography variant="h4" className="typography current-meeting-duration-info">-</Typography>
+                      <Typography variant="h4" className="typography current-meeting-duration-info">{formatMeetingsTime(currentMeeting.end.dateTime)}</Typography>
+                    </Box>
+                    <Typography variant="h4" className="typography current-meeting-owner">{currentMeeting.subject.trim()}'s meeting</Typography>
+                  </Box>
                 );
               case ROOM_STATUSES.STARTING_SOON:
                 return (
-                  <div className="current-meeting-information">
-                    <p className="starting-soon-meeting-info">Starts in {startingSoonMeetingMinutes} {startingSoonMeetingMinutes === 1 ? 'minute' : 'minutes'}</p>
-                    <p className="starting-soon-meeting-name">{todaysMeetings[0].subject.trim()}'s meeting</p>
-                  </div>
+                  <Box className="current-meeting-information">
+                    <Typography className="typography starting-soon-meeting-info">Starts in {startingSoonMeetingMinutes} {startingSoonMeetingMinutes === 1 ? 'minute' : 'minutes'}</Typography>
+                    <Typography className="typography starting-soon-meeting-name">{todaysMeetings[0].subject.trim()}'s meeting</Typography>
+                  </Box>
                 );
               case ROOM_STATUSES.AVAILABLE:
-                return <p className="available-room">Available</p>;
+                return <Typography className="typography available-room">Available</Typography>;
               default:
-                return;
+                return null;
             }
           })()}
-          <div className={`select-input-wrapper-home ${availableRoomsStyles}`}>
-            <button onClick={seeAvailableRooms} className="available-rooms-btn" disabled={!schedules}>See available rooms</button>
-            {availableRooms && <div className="book-room-wrapper">
-              <select value={selectedOption} id="roomSelect" className="available-rooms-select-input" onChange={onSelectRoomChange}>
-                {availableRooms.map((room: string, index: number) => (
-                  <option key={index} value={room}>
-                    {room}
-                  </option>
-                ))}
-              </select>
-              <button onClick={scheduleMeeting} className="available-rooms-btn">Book room for 10 minutes</button>
-            </div>
-            }
-          </div>
+          <Box className={`select-input-wrapper-home ${availableRoomsStyles}`}>
+            {schedules && <Button variant="outlined" className="available-rooms-btn"><FontAwesomeIcon icon={faCalendarPlus} onClick={seeAvailableRooms} /></Button>}
+          </Box>
         </div>
         <div className="top-container">
-          <div className={`overlay ${overlayStyles}`}></div>
+          <Box className={`overlay ${overlayStyles}`}></Box>
         </div>
         <div className="content-container">
-          <div className="left-side">
-            {
-              sessionStorage.getItem(SELECTED_ROOM) ?
-                roomEmailToNumberMap[sessionStorage.getItem(SELECTED_ROOM)!].split('').map((number: string, index: number) => (
-                  <div key={index} className="number">{number}</div>
-                )) : ''
+          <Box className="left-side">
+            {sessionStorage.getItem(SELECTED_ROOM) ?
+              roomEmailToNumberMap[sessionStorage.getItem(SELECTED_ROOM)!].split('').map((number, index) => (
+                <p key={index} className="number">{number}</p>
+              )) : ''
             }
-          </div>
-          <div className="right-side">
-            <div className="box">
-              <p className="next-meetings">Next meetings</p>
+          </Box>
+          <Box className="right-side">
+            <Box className="box">
+              <Typography variant="h6" className="typography next-meetings">Next meetings</Typography>
               {roomStatus === ROOM_STATUSES.BUSY && busyRoomMeetings.length > 0 ? (
-                busyRoomMeetings.map((element: any, index: number) => (
-                  <div className="meeting-information" key={index}>
-                    <div className="meeting-duration">
-                      <p className="meeting-duration-info">{formatMeetingsTime(element.start.dateTime)}</p>
-                      <p className="meeting-duration-info">-</p>
-                      <p className="meeting-duration-info">{formatMeetingsTime(element.end.dateTime)}</p>
-                    </div>
-                    <p className="meeting-owner">{element.subject ? `${element.subject.trim()}'s meeting` : 'Error: Name is missing'}</p>
-                  </div>
+                busyRoomMeetings.map((element: any, index: any) => (
+                  <Box className="meeting-information" key={index}>
+                    <Box className="meeting-duration">
+                      <Typography className="typography meeting-duration-info">{formatMeetingsTime(element.start.dateTime)}</Typography>
+                      <Typography className="typography meeting-duration-info">-</Typography>
+                      <Typography className="typography meeting-duration-info">{formatMeetingsTime(element.end.dateTime)}</Typography>
+                    </Box>
+                    <Typography variant="body2" className="typography meeting-owner">{element.subject ? `${element.subject.trim()}'s meeting` : 'Error: Name is missing'}</Typography>
+                  </Box>
                 ))
               ) : (roomStatus && roomStatus !== ROOM_STATUSES.BUSY) && todaysMeetings.length > 0 ? (
-                todaysMeetings.map((element: any, index: number) => (
-                  <div className="meeting-information" key={index}>
-                    <div className="meeting-duration">
-                      <p className="meeting-duration-info">{formatMeetingsTime(element.start.dateTime)}</p>
-                      <p className="meeting-duration-info">-</p>
-                      <p className="meeting-duration-info">{formatMeetingsTime(element.end.dateTime)}</p>
-                    </div>
-                    <p className="meeting-owner">{element.subject ? `${element.subject.trim()}'s meeting` : 'Error: Name is missing'}</p>
-                  </div>
+                todaysMeetings.map((element: any, index: any) => (
+                  <Box className="meeting-information" key={index}>
+                    <Box className="meeting-duration">
+                      <Typography className="typography meeting-duration-info">{formatMeetingsTime(element.start.dateTime)}</Typography>
+                      <Typography className="typography meeting-duration-info">-</Typography>
+                      <Typography className="typography meeting-duration-info">{formatMeetingsTime(element.end.dateTime)}</Typography>
+                    </Box>
+                    <Typography className="typography meeting-owner">{element.subject ? `${element.subject.trim()}'s meeting` : 'Error: Name is missing'}</Typography>
+                  </Box>
                 ))
               ) : (
-                <p className="no-meetings-message">No meetings for the rest of the day</p>
+                <Typography variant="body1" className="typography no-meetings-message">No meetings for the rest of the day</Typography>
               )}
-            </div>
-          </div>
+            </Box>
+          </Box>
         </div>
       </div>
       <ToastContainer />
+      <Modal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        aria-labelledby="modal-title"
+        aria-describedby="modal-description"
+      >
+        <Box className="modal">
+          <Box className="modal-title">
+            <div className="modal-title-container">
+              <Typography variant="h5">Book room between</Typography>
+              <Typography variant="h5" className="availability-interval">{availableRoomInterval}</Typography>
+            </div>
+            <FontAwesomeIcon className="close-modal-icon" icon={faX} onClick={() => setIsModalOpen(false)} />
+          </Box>
+          <List className="list-wrapper">
+            {availableRooms && availableRooms?.map((room, index) => (
+              <ListItem key={index} disablePadding>
+                <ListItemButton onClick={() => handleRoomSelect(room)} className="list-item-btn">
+                  Room {roomEmailToNumberMap[room]}
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      </Modal>
     </div>
   );
+
 }
 
 export default HomePage;
