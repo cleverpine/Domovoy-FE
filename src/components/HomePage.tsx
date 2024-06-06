@@ -248,9 +248,9 @@ const HomePage = () => {
     return scheduleResponse && scheduleResponse
       .filter((room: any) => {
         const roomNumber = +roomEmailToNumberMap[room.scheduleId];
-        // return roomNumber !== excludedRoomNumber;
+        return roomNumber !== excludedRoomNumber;
         // TODO change to return roomNumber when 404 room does not exist anymore
-        return roomNumber;
+        // return roomNumber;
       })
       .filter((room: any) => checkRoomAvailability(room.scheduleItems));
   }
