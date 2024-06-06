@@ -1,5 +1,4 @@
 $myImage: '../images/forest-background.png';
-$downArrow: '../images/down-arrow.svg';
 @import '../styles/colors.scss';
 
 .container {
@@ -91,8 +90,7 @@ $downArrow: '../images/down-arrow.svg';
 
 .next-meetings {
   text-align: center;
-  font-weight: 600;
-  font-size: 20px;
+  font-weight: 600 !important;
   color: $dark;
 }
 
@@ -102,12 +100,16 @@ $downArrow: '../images/down-arrow.svg';
   z-index: 2;
 }
 
+.typography {
+  font-family: inherit !important;
+}
+
 .time {
   position: absolute;
   right: 30px;
-  top: 70px;
-  font-size: 100px;
-  font-weight: 400;
+  top: 50px;
+  font-size: 100px !important;
+  font-weight: 400 !important;
   color: $light;
 }
 
@@ -118,15 +120,20 @@ $downArrow: '../images/down-arrow.svg';
   font-size: 18px;
 }
 
+.meeting-duration-info {
+  font-size: 20px !important;
+  font-weight: 600 !important;
+}
+
 .meeting-owner {
-  font-size: 20px;
+  font-size: 18px !important;
+  font-weight: 400 !important;
 }
 
 .meeting-information {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  margin-top: 20px;
+  margin-top: 16px;
 }
 
 .current-meeting-information {
@@ -135,39 +142,40 @@ $downArrow: '../images/down-arrow.svg';
   top: 200px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 3px;
   color: $light;
 }
 
 .current-meeting-duration {
   display: flex;
   gap: 10px;
-  font-weight: 600;
-  font-size: 35px;
+}
+
+.current-meeting-duration-info {
+  font-weight: 600 !important;
 }
 
 .current-meeting-owner {
-  font-weight: 400;
-  font-size: 35px;
+  font-weight: 400 !important;
 }
 
 .available-room {
   position: absolute;
   right: 30px;
   top: 200px;
-  font-size: 40px;
-  font-weight: 500;
+  font-size: 40px !important;
+  font-weight: 500 !important;
   color: $light;
 }
 
 .starting-soon-meeting-info {
-  font-size: 35px;
-  font-weight: 600;
+  font-weight: 700 !important;
+  font-size: 35px !important;
 }
 
 .starting-soon-meeting-name {
-  font-size: 30px;
-  font-weight: 400;
+  font-weight: 500 !important;
+  font-size: 30px !important;
 }
 
 .no-meetings-message {
@@ -180,13 +188,12 @@ $downArrow: '../images/down-arrow.svg';
 .select-input-wrapper-home {
   position: absolute;
   right: 30px;
-  top: 280px;
-  min-width: 250px;
   display: flex;
   gap: 10px;
   flex-direction: column;
   color: $light;
   font-weight: bold;
+  font-size: 30px;
 }
 
 .starting-soon-room-wrapper, .busy-room-wrapper {
@@ -197,31 +204,61 @@ $downArrow: '../images/down-arrow.svg';
   top: 280px;
 }
 
-.available-rooms-btn {
-  padding: 10px 20px;
-  font-size: 18px;
-  background: $silver;
-  border: 1px solid $silver;
+.list-item-btn {
+  padding: 16px 0 16px 0 !important;
+  font-size: 20px;
+}
+
+.modal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  padding: 0;
   border-radius: 10px;
-  color: $dark;
+  background-color: $light;
+
+  &:focus-visible {
+    outline: none;
+  }
 }
 
-.book-room-wrapper {
+.availability-interval {
+  font-weight: 500 !important;
+}
+
+.modal-title {
   display: flex;
-  gap: 10px;
-  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid $silver;
+  padding: 16px 32px 8px 32px;
+
+  .modal-title-container {
+    display: flex;
+    gap: 10px;
+
+    h5 {
+      font-family: inherit !important;
+    }
+  }
+  
 }
 
-.available-rooms-select-input {
-  padding: 10px;
-  border: none;
-  outline: none;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background-image: url(#{$downArrow});
-  background-repeat:no-repeat; 
-  background-position:calc(100% - 10px);
-  font-size: 14px;
-  color: $dark;
+.list-wrapper {
+  padding: 16px 32px 32px !important;
+}
+
+.available-rooms-btn {
+  width: 90px;
+  height: 80px;
+  border: 2px solid $light !important;
+  font-size: 40px !important;
+  color: $light !important;
+}
+
+.close-modal-icon {
+  padding: 16px;
+  border-radius: 20px;
 }

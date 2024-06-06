@@ -3,6 +3,9 @@ import { faSignInAlt, faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useEffect, useState } from "react";
 
+import { Box, Button, Typography } from '@mui/material';
+
+
 import { loginRequest } from "../config/authConfig";
 import { DEFAULT_SELECTED_ROOM, SELECTED_ROOM } from "../constants/login";
 import { roomEmailToNumberMap } from "../mappers/roomMapper";
@@ -38,15 +41,15 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="login-container">
-      <h1>AzureAD OAuth</h1>
-      <button className="button" onClick={handleLogin}>
+    <Box className="login-container">
+      <Typography variant="h4">AzureAD OAuth</Typography>
+      <Button variant="contained" className="button" onClick={handleLogin}>
         <FontAwesomeIcon icon={faSignInAlt} /> Login
-      </button>
-      <button className="button" onClick={handleLogout}>
+      </Button>
+      <Button variant="contained" className="button" onClick={handleLogout}>
         <FontAwesomeIcon icon={faSignOutAlt} /> Logout
-      </button>
-      <div className="select-input-wrapper">
+      </Button>
+      <Box className="select-input-wrapper">
         <select className="select-room-input" id="options" value={selectedOption} onChange={handleChange}>
           {Object.entries(roomEmailToNumberMap).map(([email, number]) => (
             <option key={email} value={email}>
@@ -54,7 +57,7 @@ export const LoginPage = () => {
             </option>
           ))}
         </select>
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 };
