@@ -1,10 +1,16 @@
-import { useMsal } from '@azure/msal-react';
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import HomePage from "./components/HomePage";
 import { LoginPage } from './components/LoginPage';
+console.log(localStorage);
+const ProtHome = () => {
+    const token = localStorage.getItem('token');
+    const isAuthenticated = !!token; 
+    return isAuthenticated ? <HomePage /> : <Navigate to="/login" />;
+};
 
 const App = () => {
-    const { accounts } = useMsal();
+    const token = localStorage.getItem('token');
+    const isAuthenticated = !!token;
 
     return (
         <Router>
@@ -12,19 +18,17 @@ const App = () => {
                 <Route 
                     path="/login" 
                     element={
-                        accounts.length > 0 ? <Navigate to="/home" /> : <LoginPage />
+                        isAuthenticated ? <Navigate to="/home" /> : <LoginPage />
                     } 
                 />
                 <Route 
                     path="/home" 
-                    element={
-                        accounts.length > 0 ? <HomePage /> : <Navigate to="/login" />
-                    } 
+                    element={<ProtHome/>} 
                 />
                 <Route 
                     path="*" 
                     element={
-                        accounts.length > 0 ? <Navigate to="/home" /> : <Navigate to="/login" />
+                        isAuthenticated ? <Navigate to="/home" /> : <Navigate to="/login" />
                     } 
                 />
             </Routes>

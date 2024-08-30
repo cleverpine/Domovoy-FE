@@ -1,10 +1,12 @@
 import React, { useState, FormEvent } from 'react';
 import { Box, Button, Typography, TextField, useTheme, createTheme, ThemeProvider, CssBaseline, Select, MenuItem, CircularProgress, SelectChangeEvent } from '@mui/material';
-import { faSignInAlt, faSignOutAlt, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { faSignInAlt, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useNavigate } from 'react-router-dom';
 import { SELECTED_ROOM } from '../constants/login';
 import { roomEmailToNumberMap } from '../mappers/roomMapper';
+localStorage.clear();
+let canR = false;
 
 // Fetch token function
 const fetchTokenFromBE = async (username2: string, password2: string) => {
@@ -59,15 +61,23 @@ export const LoginPage = () => {
         setLoading(true);
         setError('');
 
+        if (!selectedOption) {
+            setError('Please select a room.');
+            setLoading(false);
+            return;
+        }
+
         try {
             sessionStorage.setItem('username', username);
             sessionStorage.setItem('password', password);
+            sessionStorage.setItem(SELECTED_ROOM, selectedOption);
 
             const token = await fetchTokenFromBE(username, password);
 
             if (token) {
-                sessionStorage.setItem('token', token);
-                navigate('/home'); // Redirect to home page upon successful login
+                localStorage.setItem('token', token);
+                navigate('/home');
+                console.log(localStorage);
             } else {
                 setError('Invalid credentials');
             }
@@ -91,7 +101,6 @@ export const LoginPage = () => {
 
     const handleChange = (event: SelectChangeEvent<string>) => {
         setSelectedOption(event.target.value);
-        sessionStorage.setItem(SELECTED_ROOM, event.target.value);
     };
 
     const togglePasswordVisibility = () => {
@@ -146,7 +155,7 @@ export const LoginPage = () => {
                         type="submit"
                         variant="contained"
                         className="button"
-                        disabled={loading}
+                        disabled={loading || !selectedOption}
                         sx={{ mt: 2 }}
                     >
                         {loading ? <CircularProgress size={24} /> : <FontAwesomeIcon icon={faSignInAlt} />}
@@ -160,15 +169,6 @@ export const LoginPage = () => {
                     </Typography>
                 )}
 
-                <Button
-                    variant="contained"
-                    className="button"
-                    onClick={handleLogout}
-                    sx={{ mt: 2 }}
-                >
-                    <FontAwesomeIcon icon={faSignOutAlt} /> Logout
-                </Button>
-
                 <Box className="select-input-wrapper" sx={{ mt: 2, width: '100%' }}>
                     <Select
                         value={selectedOption}
@@ -181,17 +181,17 @@ export const LoginPage = () => {
                             '& .MuiSelect-select': {
                                 display: 'flex',
                                 alignItems: 'center',
-                                color: theme => theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.text.secondary, // Text color adjusted based on the theme
-                                bgcolor: theme => theme.palette.mode === 'dark' ? theme.palette.background.paper : theme.palette.background.default, // Background color
+                                color: theme => theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.text.secondary,
+                                bgcolor: theme => theme.palette.mode === 'dark' ? theme.palette.background.paper : theme.palette.background.default,
                             },
                             '& .MuiOutlinedInput-notchedOutline': {
-                                borderColor: theme => theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.text.secondary, // Border color
+                                borderColor: theme => theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.text.secondary,
                             },
                             '& .MuiMenuItem-root': {
-                                color: theme => theme.palette.text.primary, // Menu item text color adjusted
+                                color: theme => theme.palette.text.primary,
                             },
                             '& .MuiSelect-icon': {
-                                color: theme => theme.palette.text.primary, // Dropdown icon color
+                                color: theme => theme.palette.text.primary,
                             }
                         }}
                     >

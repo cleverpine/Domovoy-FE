@@ -17,7 +17,7 @@ import { roomEmailToNumberMap } from "../mappers/roomMapper";
 
 
 const HomePage = () => {
-  const { instance, accounts, inProgress } = useMsal();
+  // const { instance, accounts, inProgress } = useMsal();
 
   const [token, setToken] = useState<string>('');
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -42,7 +42,7 @@ const HomePage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   // room interval for booking
   const [availableRoomInterval, setAvailableRoomInterval] = useState<any>(null);
-
+  
   // Hide available rooms in 5 minutes
   useEffect(() => {
     if (availableRooms) {
@@ -57,32 +57,31 @@ const HomePage = () => {
   }, [availableRooms]);
 
   const acquireToken = () => {
-    if (inProgress === "none" && accounts.length > 0) {
-        instance.acquireTokenSilent({
-            ...loginRequest,
-            account: accounts[0],
-            forceRefresh: true,
-            refreshTokenExpirationOffsetSeconds: TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME
-        }).then(async (response: any) => {
-            setToken(response.accessToken);
-            const data =  await fetchCalendarFromBackend(response.accessToken);
+    // if (inProgress === "none" && accounts.length > 0) {
+    //     instance.acquireTokenSilent({
+    //         ...loginRequest,
+    //         account: accounts[0],
+    //         forceRefresh: true,
+    //         refreshTokenExpirationOffsetSeconds: TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME
+    //     }).then(async (response: any) => {
+    //         setToken(response.accessToken);
+    //         const data =  await fetchCalendarFromBackend(response.accessToken);
 
-            setSchedules(data.value);
-            const selectedRoomEmail = sessionStorage.getItem(SELECTED_ROOM);
-            const selectedRoomNumber = roomEmailToNumberMap[selectedRoomEmail!];
+    //         setSchedules(data.value);
+    //         const selectedRoomEmail = sessionStorage.getItem(SELECTED_ROOM);
+    //         const selectedRoomNumber = roomEmailToNumberMap[selectedRoomEmail!];
 
-            getCurrentRoomSchedule(data, selectedRoomNumber);
-        }).catch((error: any) => {
-            console.log('Acquire token silent failed', error);
-        });
-    }
+    //         getCurrentRoomSchedule(data, selectedRoomNumber);
+    //     }).catch((error: any) => {
+    //         console.log('Acquire token silent failed', error);
+    //     });
+    // }
 };
-
-const fetchCalendarFromBackend = async (accessToken: any) => {
+const fetchCalendarFromBackend = async () => {
       const calendarResponse = await fetch('http://127.0.0.1:4000/fetch-calendar', {
           method: 'GET',
           headers: {
-              'Authorization': `Bearer ${accessToken}`, 
+              'Authorization': `Bearer ${localStorage.getItem("token")}`, 
           },
       });
 
@@ -99,12 +98,22 @@ const fetchCalendarFromBackend = async (accessToken: any) => {
 
   // Fetch token & calendar every 30 minutes
   useEffect(() => {
-    acquireToken();
+    // acquireToken();
+    getInitialCalendar();
+    // const tokenTimer = setInterval(acquireToken, FETCH_CALENDAR_INTERVAL);
 
-    const tokenTimer = setInterval(acquireToken, FETCH_CALENDAR_INTERVAL);
+    // return () => clearInterval(tokenTimer);
+  }, []);
 
-    return () => clearInterval(tokenTimer);
-  }, [accounts, instance, loginRequest]);
+  const getInitialCalendar = async () => {
+
+    const data = await fetchCalendarFromBackend();
+      setSchedules(data.value);
+    const selectedRoomEmail = sessionStorage.getItem(SELECTED_ROOM);
+    const selectedRoomNumber = roomEmailToNumberMap[selectedRoomEmail!];
+
+    getCurrentRoomSchedule(data, selectedRoomNumber);
+  }
 
   // Update current time every second
   useEffect(() => {
@@ -276,7 +285,7 @@ const fetchCalendarFromBackend = async (accessToken: any) => {
   };
 
   const seeAvailableRooms = async () => {
-    const data = await fetchCalendarFromBackend(token);
+    const data = await fetchCalendarFromBackend();
 
     setSchedules(data.value);
 
@@ -304,7 +313,7 @@ const fetchCalendarFromBackend = async (accessToken: any) => {
   const scheduleMeeting = async (selectedRoom: string): Promise<any> => {
     const now = format(currentTime, DATE_PATTERN);
 
-    const data = await fetchCalendarFromBackend(token);
+    const data = await fetchCalendarFromBackend();
     setSchedules(data.value);
 
     const chosenRoomSchedule = data.value.find((room: any) => room.scheduleId === selectedRoom);
@@ -406,9 +415,9 @@ const fetchCalendarFromBackend = async (accessToken: any) => {
   };
 
   const handleLogout = () => {
-    instance.logoutRedirect().catch(e => {
-      console.error(e);
-    });
+    // instance.logoutRedirect().catch(e => {
+    //   console.error(e);
+    // });
   };
 
   if (!sessionStorage.getItem(SELECTED_ROOM)) {
