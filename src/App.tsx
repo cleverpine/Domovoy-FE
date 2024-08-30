@@ -17,23 +17,14 @@ const App = () => {
             <Routes>
                 <Route 
                     path="/login" 
-                    element={
-                        isAuthenticated ? <Navigate to="/home" /> : <LoginPage />
-                    } 
-                />
+                    element={isAuthenticated ? <Navigate to="/home" /> : <LoginPage />}/>
                 <Route 
                     path="/home" 
-                    element={<ProtHome/>} 
-                />
+                    element={<ProtHome/>}/>
                 <Route 
                     path="*" 
-                    element={
-                        isAuthenticated ? <Navigate to="/home" /> : <Navigate to="/login" />
-                    } 
-                />
+                    element={isAuthenticated ? <Navigate to="/home" /> : <Navigate to="/login" />}/>
             </Routes>
-        </Router>
-    );
-};
+        </Router>);};
 
 export default App;
