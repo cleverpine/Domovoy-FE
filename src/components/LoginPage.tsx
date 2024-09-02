@@ -7,7 +7,6 @@ import { SELECTED_ROOM } from '../constants/login';
 import { roomEmailToNumberMap } from '../mappers/roomMapper';
 import pineImg from './pineImg.png'; 
 
-// Fetch token function
 const fetchTokenFromBE = async (username2: string, password2: string) => {
     try {
         const response = await fetch('http://127.0.0.1:4000/fetch-token', {
@@ -23,6 +22,7 @@ const fetchTokenFromBE = async (username2: string, password2: string) => {
         if (responseBody.message === "supperman") {
             return null;
         }
+    
         return responseBody.token;
     } catch (e) {
         console.error("Error fetching token:", e);

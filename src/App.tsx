@@ -5,6 +5,7 @@ console.log(localStorage);
 const ProtHome = () => {
     const token = localStorage.getItem('token');
     const isAuthenticated = !!token; 
+
     return isAuthenticated ? <HomePage /> : <Navigate to="/login" />;
 };
 

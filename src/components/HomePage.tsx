@@ -6,16 +6,15 @@ import { Box, Button, List, ListItem, ListItemButton, Modal, Typography } from '
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import { faCalendarPlus, faX } from '@fortawesome/free-solid-svg-icons';
+import { faCalendarPlus, faRefresh, faX } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import { graphConfig, loginRequest } from "../config/authConfig";
 import { AVAILABILITY_VIEW_INTERVAL, AVAILABLE_ROOMS_INTERVAL, AVAILABLE_ROOMS_STYLES, DATE_PATTERN, FETCH_CALENDAR_INTERVAL, OVERLAY_STYLES, ROOM_STATUSES, TIMEZONE, TIME_UPDATE_INTERVAL, TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME } from "../constants/home";
-import { SELECTED_ROOM } from "../constants/login";
+import { DEFAULT_SELECTED_ROOM, SELECTED_ROOM } from "../constants/login";
 import { fetchWithHeaders } from "../helpers/fetchHelper";
 import { roomEmailToNumberMap } from "../mappers/roomMapper";
-
-
+import { Session } from 'inspector';
 const HomePage = () => {
   // const { instance, accounts, inProgress } = useMsal();
 
@@ -42,7 +41,6 @@ const HomePage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   // room interval for booking
   const [availableRoomInterval, setAvailableRoomInterval] = useState<any>(null);
-  
   // Hide available rooms in 5 minutes
   useEffect(() => {
     if (availableRooms) {
@@ -78,19 +76,21 @@ const HomePage = () => {
     // }
 };
 const fetchCalendarFromBackend = async () => {
-      const calendarResponse = await fetch('http://127.0.0.1:4000/fetch-calendar', {
-          method: 'GET',
-          headers: {
-              'Authorization': `Bearer ${localStorage.getItem("token")}`, 
-          },
-      });
+  const calendarResponse = await fetch('http://127.0.0.1:4000/fetch-calendar', {
+      method: 'GET',
+      headers: {
+          'Authorization': `Bearer ${localStorage.getItem("token")}`, 
+          'email': sessionStorage.getItem(SELECTED_ROOM) || DEFAULT_SELECTED_ROOM,  
+      },
+  });
 
-      if (!calendarResponse.ok) {
-          throw new Error(`Error fetching calendar: ${calendarResponse.status} ${calendarResponse.statusText}`);
-      }
+  if (!calendarResponse.ok) {
+      throw new Error(`Error fetching calendar: ${calendarResponse.status} ${calendarResponse.statusText}`);
+  }
 
-      return await calendarResponse.json();
+  return await calendarResponse.json();
 };
+
 
 
 
@@ -121,7 +121,7 @@ const fetchCalendarFromBackend = async () => {
       const now = new Date();
       setCurrentTime(now);
     }, TIME_UPDATE_INTERVAL);
-
+    
     return () => clearInterval(timer);
   }, []);
 
@@ -261,7 +261,6 @@ const fetchCalendarFromBackend = async () => {
       })
       .filter((room: any) => checkRoomAvailability(room.scheduleItems));
   }
-
   const sortRoomsBasedOnDistance = (availableRooms: any, currentRoomNumber: number) => {
     return availableRooms && availableRooms.sort((a: any, b: any) => {
       const roomNumberA = +roomEmailToNumberMap[a.scheduleId];
@@ -415,9 +414,8 @@ const fetchCalendarFromBackend = async () => {
   };
 
   const handleLogout = () => {
-    // instance.logoutRedirect().catch(e => {
-    //   console.error(e);
-    // });
+    localStorage.clear();
+    window.location.reload();
   };
 
   if (!sessionStorage.getItem(SELECTED_ROOM)) {
@@ -529,8 +527,20 @@ const fetchCalendarFromBackend = async () => {
           </List>
         </Box>
       </Modal>
+  
+      <Box sx={{ position: 'fixed', bottom: 16, left: 16 }}>
+        <Button 
+          variant="contained" 
+          color="secondary" 
+          onClick={handleLogout} 
+          style={{ backgroundColor: 'red', color: 'white' }}
+        >
+          Logout
+        </Button>
+      </Box>
     </div>
   );
+  
 
 }
 
