@@ -5,7 +5,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useNavigate } from 'react-router-dom';
 import { SELECTED_ROOM } from '../constants/login';
 import { roomEmailToNumberMap } from '../mappers/roomMapper';
-import pineImg from './pineImg.png'; 
+import pineImg from './pineImg.png';
+import './LoginPage.css'; // Import the CSS file
 
 const fetchTokenFromBE = async (username2: string, password2: string) => {
     try {
@@ -42,20 +43,6 @@ const darkTheme = createTheme({
         mode: 'dark',
     },
 });
-
-const fadeInUp = {
-    animation: 'fadeInUp 1s ease-out',
-    '@keyframes fadeInUp': {
-        from: {
-            opacity: 0,
-            transform: 'translateY(20px)',
-        },
-        to: {
-            opacity: 1,
-            transform: 'translateY(0)',
-        },
-    },
-};
 
 export const LoginPage = () => {
     const [username, setUsername] = useState('');
@@ -123,18 +110,20 @@ export const LoginPage = () => {
     const toggleDarkMode = () => {
         setIsDarkMode(!isDarkMode);
     };
+
     return (
         <ThemeProvider theme={isDarkMode ? darkTheme : lightTheme}>
             <CssBaseline />
-            <Box className="login-container" sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Box className="login-container fadeInUp" sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <Typography 
                     variant="h4" 
                     gutterBottom 
-                    sx={fadeInUp}>
+                    className="slideIn"
+                >
                     <span style={{ color: 'green', fontWeight: 'bold' }}>Clever</span>
                     <span style={{ fontWeight: 'bold' }}>Pine Room Reservations</span>
-                    <img src={pineImg} alt="Pine" style={{ marginLeft: '10px', height: '45px', animation: 'fadeIn 2s', marginTop: '0px' }} />
-                    </Typography>
+                    <img src={pineImg} alt="Pine" className="pulse" style={{ marginLeft: '10px', height: '45px', marginTop: '0px' }} />
+                </Typography>
                 <Button
                     variant="outlined"
                     onClick={toggleDarkMode}
@@ -151,7 +140,7 @@ export const LoginPage = () => {
                         onChange={(e) => setUsername(e.target.value)}
                         margin="normal"
                         fullWidth
-                        sx={{ animation: 'slideIn 1s' }}
+                        className="slideIn"
                     />
                     <Box sx={{ position: 'relative' }}>
                         <TextField
@@ -162,10 +151,10 @@ export const LoginPage = () => {
                             onChange={(e) => setPassword(e.target.value)}
                             margin="normal"
                             fullWidth
-                            sx={{ animation: 'slideIn 1s' }}
+                            className="slideIn"
                         />
                         <Button
-                            sx={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', transition: 'transform 0.3s', '&:hover': { transform: 'scale(1.05)' } }}
+                            sx={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', transition: 'transform 0.3s', '&:hover': { transform: 'scale(1.1)' } }}
                             onClick={togglePasswordVisibility}
                         >
                             <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
@@ -174,9 +163,8 @@ export const LoginPage = () => {
                     <Button
                         type="submit"
                         variant="contained"
-                        className="button"
+                        className="button slideIn"
                         disabled={loading || !selectedOption}
-                        sx={{ mt: 2, animation: 'slideIn 1s' }}
                     >
                         {loading ? <CircularProgress size={24} /> : <FontAwesomeIcon icon={faSignInAlt} />}
                         Login
@@ -184,12 +172,12 @@ export const LoginPage = () => {
                 </form>
 
                 {error && (
-                    <Typography color="error" sx={{ mt: 2, animation: 'fadeIn 1s' }}>
+                    <Typography color="error" className="fadeInUp">
                         {error}
                     </Typography>
                 )}
 
-                <Box className="select-input-wrapper" sx={{ mt: 2, width: '100%', animation: 'fadeInUp 1s' }}>
+                <Box className="select-input-wrapper fadeInUp" sx={{ mt: 2, width: '100%' }}>
                     <Select
                         value={selectedOption}
                         onChange={handleChange}
