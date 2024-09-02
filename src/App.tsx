@@ -20,7 +20,7 @@ const App = () => {
                     path="/login" 
                     element={isAuthenticated ? <Navigate to="/home" /> : <LoginPage />}/>
                 <Route 
-                    path="/home" 
+                    path= "/home"  
                     element={<ProtHome/>}/>
                 <Route 
                     path="*" 

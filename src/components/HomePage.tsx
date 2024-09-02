@@ -76,11 +76,10 @@ const HomePage = () => {
     // }
 };
 const fetchCalendarFromBackend = async () => {
-  const calendarResponse = await fetch('http://127.0.0.1:4000/fetch-calendar', {
+  const calendarResponse = await fetch(`http://127.0.0.1:4000/fetch-calendar/rooms/${sessionStorage.getItem(SELECTED_ROOM) || DEFAULT_SELECTED_ROOM}`, {
       method: 'GET',
       headers: {
-          'Authorization': `Bearer ${localStorage.getItem("token")}`, 
-          'email': sessionStorage.getItem(SELECTED_ROOM) || DEFAULT_SELECTED_ROOM,  
+          'Authorization': `Bearer ${localStorage.getItem("token")}`
       },
   });
 
@@ -292,15 +291,13 @@ const fetchCalendarFromBackend = async () => {
     // TODO excluded room will be deleted later
     const availableRooms = getAvailableRooms(data.value, currentRoom, "404");
     const roomsWithEmpty = availableRooms && availableRooms.map((room: any) => room.scheduleId);
-
     if (roomsWithEmpty && roomsWithEmpty.length === 0) {
       toast.error(`No available rooms for the next 10 minutes!`);
       setAvailableRooms(null);
       setSelectedOption('');
       return;
     }
-
-    setAvailableRooms(roomsWithEmpty);
+   setAvailableRooms(roomsWithEmpty);
     setSelectedOption(roomsWithEmpty && roomsWithEmpty[0]);
     setIsModalOpen(true);
   }
