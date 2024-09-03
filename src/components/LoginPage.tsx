@@ -117,7 +117,7 @@ export const LoginPage = () => {
                     className="slideIn"
                 >
                     <span style={{ color: 'green', fontWeight: 'bold' }}>Clever</span>
-                    <span style={{ fontWeight: 'bold' }}>Pine Room Reservations</span>
+                    <span style={{ fontWeight: 'bold' , color: "white"}}>Pine Room Reservations</span>
                     <img src={pineImg} alt="Pine" className="rotateZoomFade" style={{ marginLeft: '10px', height: '45px', marginTop: '0px' }} />
                 </Typography>
                 <Button
@@ -126,7 +126,7 @@ export const LoginPage = () => {
                     sx={{ mb: 2, transition: 'transform 0.3s', '&:hover': { transform: 'scale(1.1)' } }}
                     className="pulseGlow"
                 >
-                    {isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                    {isDarkMode ? 'Light Mode' : 'Dark Mode'}
                 </Button>
 
                 <form onSubmit={handleLogin} style={{ width: '100%' }}>
@@ -137,7 +137,12 @@ export const LoginPage = () => {
                         onChange={(e) => setUsername(e.target.value)}
                         margin="normal"
                         fullWidth
-                        className="typingInput slideIn"
+                        className="typingInput"
+                        InputProps={{
+                            style: {
+                                animation: username ? 'typingAnimation 0.3s ease-in-out' : 'none',
+                            },
+                        }}
                     />
                     <Box sx={{ position: 'relative' }}>
                         <TextField
@@ -148,7 +153,12 @@ export const LoginPage = () => {
                             onChange={(e) => setPassword(e.target.value)}
                             margin="normal"
                             fullWidth
-                            className="typingInput slideIn"
+                            className="typingInput"
+                            InputProps={{
+                                style: {
+                                    animation: password ? 'typingAnimation 0.3s ease-in-out' : 'none',
+                                },
+                            }}
                         />
                         <Button
                             sx={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', transition: 'transform 0.3s', '&:hover': { transform: 'scale(1.1)' } }}
