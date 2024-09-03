@@ -55,27 +55,7 @@ const HomePage = () => {
     }
   }, [availableRooms]);
 
-  const acquireToken = () => {
-    // if (inProgress === "none" && accounts.length > 0) {
-    //     instance.acquireTokenSilent({
-    //         ...loginRequest,
-    //         account: accounts[0],
-    //         forceRefresh: true,
-    //         refreshTokenExpirationOffsetSeconds: TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME
-    //     }).then(async (response: any) => {
-    //         setToken(response.accessToken);
-    //         const data =  await fetchCalendarFromBackend(response.accessToken);
 
-    //         setSchedules(data.value);
-    //         const selectedRoomEmail = sessionStorage.getItem(SELECTED_ROOM);
-    //         const selectedRoomNumber = roomEmailToNumberMap[selectedRoomEmail!];
-
-    //         getCurrentRoomSchedule(data, selectedRoomNumber);
-    //     }).catch((error: any) => {
-    //         console.log('Acquire token silent failed', error);
-    //     });
-    // }
-};
 const fetchCalendarFromBackend = async () => {
   const calendarResponse = await fetch(`http://127.0.0.1:4000/fetch-calendar/rooms/${sessionStorage.getItem(SELECTED_ROOM) || DEFAULT_SELECTED_ROOM}`, {
       method: 'GET',
@@ -98,11 +78,8 @@ const fetchCalendarFromBackend = async () => {
 
   // Fetch token & calendar every 30 minutes
   useEffect(() => {
-    // acquireToken();
     getInitialCalendar();
-    // const tokenTimer = setInterval(acquireToken, FETCH_CALENDAR_INTERVAL);
 
-    // return () => clearInterval(tokenTimer);
   }, []);
 
   const getInitialCalendar = async () => {
@@ -255,10 +232,9 @@ const fetchCalendarFromBackend = async () => {
     return scheduleResponse && scheduleResponse
       .filter((room: any) => {
         const roomNumber = +roomEmailToNumberMap[room.scheduleId];
-        return roomNumber !== excludedRoomNumber;
-        // return roomNumber;
+        // return roomNumber !== excludedRoomNumber;
         // TODO change to return roomNumber when 404 room does not exist anymore
-        // return roomNumber;
+        return roomNumber;
       })
       .filter((room: any) => checkRoomAvailability(room.scheduleItems));
   }
@@ -365,8 +341,6 @@ const fetchCalendarFromBackend = async () => {
 
       });
       
-  
-      // const response = await fetchWithHeaders(graphConfig.graphScheduleMeetingEndpoint, token, body);
       const data = await response.json();
 
       if (!response.ok) 

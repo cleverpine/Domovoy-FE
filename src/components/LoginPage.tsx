@@ -1,4 +1,4 @@
-import React, { useState, FormEvent } from 'react';
+import React, { useState, FormEvent, useEffect } from 'react';
 import { Box, Button, Typography, TextField, useTheme, createTheme, ThemeProvider, CssBaseline, Select, MenuItem, CircularProgress, SelectChangeEvent } from '@mui/material';
 import { faSignInAlt, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { SELECTED_ROOM } from '../constants/login';
 import { roomEmailToNumberMap } from '../mappers/roomMapper';
 import pineImg from './pineImg.png';
-import './LoginPage.css'; 
+import './LoginPage.css';
 
 const fetchTokenFromBE = async (username2: string, password2: string) => {
     try {
@@ -56,6 +56,10 @@ export const LoginPage = () => {
     const navigate = useNavigate();
     const theme = useTheme();
 
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
+    }, [isDarkMode]);
+
     const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setLoading(true);
@@ -77,7 +81,6 @@ export const LoginPage = () => {
             if (token) {
                 localStorage.setItem('token', token);
                 navigate('/home');
-                console.log(localStorage);
             } else {
                 setError('Invalid credentials');
             }
@@ -90,13 +93,6 @@ export const LoginPage = () => {
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleLogout = () => {
-        sessionStorage.removeItem(SELECTED_ROOM);
-        sessionStorage.removeItem('username');
-        sessionStorage.removeItem('password');
-        sessionStorage.removeItem('token');
     };
 
     const handleChange = (event: SelectChangeEvent<string>) => {
@@ -122,12 +118,13 @@ export const LoginPage = () => {
                 >
                     <span style={{ color: 'green', fontWeight: 'bold' }}>Clever</span>
                     <span style={{ fontWeight: 'bold' }}>Pine Room Reservations</span>
-                    <img src={pineImg} alt="Pine" className="pulse" style={{ marginLeft: '10px', height: '45px', marginTop: '0px' }} />
+                    <img src={pineImg} alt="Pine" className="rotateZoomFade" style={{ marginLeft: '10px', height: '45px', marginTop: '0px' }} />
                 </Typography>
                 <Button
                     variant="outlined"
                     onClick={toggleDarkMode}
-                    sx={{ mb: 2, transition: 'transform 0.3s', '&:hover': { transform: 'scale(1.05)' } }}
+                    sx={{ mb: 2, transition: 'transform 0.3s', '&:hover': { transform: 'scale(1.1)' } }}
+                    className="pulseGlow"
                 >
                     {isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
                 </Button>
@@ -140,7 +137,7 @@ export const LoginPage = () => {
                         onChange={(e) => setUsername(e.target.value)}
                         margin="normal"
                         fullWidth
-                        className="slideIn"
+                        className="typingInput slideIn"
                     />
                     <Box sx={{ position: 'relative' }}>
                         <TextField
@@ -151,7 +148,7 @@ export const LoginPage = () => {
                             onChange={(e) => setPassword(e.target.value)}
                             margin="normal"
                             fullWidth
-                            className="slideIn"
+                            className="typingInput slideIn"
                         />
                         <Button
                             sx={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', transition: 'transform 0.3s', '&:hover': { transform: 'scale(1.1)' } }}

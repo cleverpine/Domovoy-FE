@@ -1,36 +1,89 @@
-/* LoginPage.css */
+:root {
+    --pulse-glow-light: rgb(255, 255, 255);
+    --pulse-glow-dark: rgba(0, 0, 0, 0.8);
+}
+
+[data-theme="light"] {
+    --pulse-glow-color: var(--pulse-glow-dark);
+}
+
+[data-theme="dark"] {
+    --pulse-glow-color: var(--pulse-glow-light);
+}
+
 @keyframes fadeInUp {
-    from {
+    0% {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(30px);
     }
-    to {
+    100% {
         opacity: 1;
         transform: translateY(0);
     }
 }
 
 @keyframes slideIn {
-    from {
+    0% {
         opacity: 0;
-        transform: translateX(-20px);
+        transform: translateX(-30px);
     }
-    to {
+    100% {
         opacity: 1;
         transform: translateX(0);
     }
 }
 
-@keyframes pulse {
+
+@keyframes pulseGlow {
     0% {
-        transform: scale(1);
+        box-shadow: 0 0 10px rgba(221, 222, 221, 0.5);
     }
     50% {
-        transform: scale(1.05);
+        box-shadow: 0 0 20px var(--pulse-glow-color);
     }
     100% {
-        transform: scale(1);
+        box-shadow: 0 0 10px rgba(221, 222, 221, 0.5);
     }
+}
+
+@keyframes expandCollapse {
+    from {
+        opacity: 0;
+        transform: scaleY(0);
+    }
+    to {
+        opacity: 1;
+        transform: scaleY(1);
+    }
+}
+
+@keyframes highlightSelection {
+    0% {
+        background-color: rgba(0, 0, 0, 0.1);
+    }
+    50% {
+        background-color: rgba(0, 0, 0, 0.3);
+    }
+    100% {
+        background-color: rgba(0, 0, 0, 0.1);
+    }
+}
+
+.select-input-wrapper {
+    position: relative;
+}
+
+.MuiSelect-root {
+    transition: background-color 0.3s ease-in-out;
+    animation: expandCollapse 0.3s ease-in-out;
+}
+
+.MuiMenuItem-root {
+    transition: background-color 0.3s ease-in-out;
+}
+
+.MuiMenuItem-root.Mui-selected {
+    animation: highlightSelection 0.5s ease-in-out;
 }
 
 .fadeInUp {
@@ -38,9 +91,13 @@
 }
 
 .slideIn {
-    animation: slideIn 0.5s ease-out;
+    animation: slideIn 0.8s ease-out;
 }
 
-.pulse {
-    animation: pulse 1.5s infinite;
+.rotateZoomFade {
+    animation: rotateZoomFade 3s infinite ease-in-out;
+}
+
+.pulseGlow {
+    animation: pulseGlow 2s infinite;
 }
