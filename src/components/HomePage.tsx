@@ -15,6 +15,7 @@ import { DEFAULT_SELECTED_ROOM, SELECTED_ROOM } from "../constants/login";
 import { fetchWithHeaders } from "../helpers/fetchHelper";
 import { roomEmailToNumberMap } from "../mappers/roomMapper";
 import { Session } from 'inspector';
+
 const HomePage = () => {
   // const { instance, accounts, inProgress } = useMsal();
 
@@ -255,6 +256,7 @@ const fetchCalendarFromBackend = async () => {
       .filter((room: any) => {
         const roomNumber = +roomEmailToNumberMap[room.scheduleId];
         return roomNumber !== excludedRoomNumber;
+        // return roomNumber;
         // TODO change to return roomNumber when 404 room does not exist anymore
         // return roomNumber;
       })
@@ -319,19 +321,22 @@ const fetchCalendarFromBackend = async () => {
       setSelectedOption('');
       return;
     }
-
+    
     const formattedEndTime = getEndTime(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
     try {
+      const now = new Date().toISOString(); 
+      const formattedEndTime = new Date(Date.now() + 3600000).toISOString(); 
+      const TIMEZONE = 'Europe/Sofia';
+    
       const body = {
         subject: 'System Rooms',
         start: {
           dateTime: now,
-          timeZone: TIMEZONE
+          timeZone: TIMEZONE,
         },
         end: {
           dateTime: formattedEndTime,
-          timeZone: TIMEZONE
+          timeZone: TIMEZONE,
         },
         attendees: [
           {
@@ -340,15 +345,32 @@ const fetchCalendarFromBackend = async () => {
               name: roomEmailToNumberMap[selectedOption],
             },
             type: 'resource',
-          }
+          },
         ],
       };
+      const token = localStorage.getItem('token');
+      if (!token) {
+          toast.error('No authentication token found.');
+          throw new Error('Authentication token is missing.');
+      }
+      const response = await fetch(`http://127.0.0.1:4000/schedule-meeting`, 
+        {
+        method: 'POST',
+        headers: 
+        {
+          "Authorization": `Bearer ${token}`,
+          // "graphConfig": JSON.stringify(graphConfig),
+        },
+        body: JSON.stringify(body),
 
-      const response = await fetchWithHeaders(graphConfig.graphScheduleMeetingEndpoint, token, body);
-
+      });
+      
+  
+      // const response = await fetchWithHeaders(graphConfig.graphScheduleMeetingEndpoint, token, body);
       const data = await response.json();
 
-      if (!response.ok) {
+      if (!response.ok) 
+      {
         toast.error(`Failed to schedule meeting: ${response.status} - ${response.statusText}`);
         throw new Error(data.error.message);
       }
@@ -359,7 +381,9 @@ const fetchCalendarFromBackend = async () => {
       setSelectedOption('');
       setIsModalOpen(false);
       return data;
-    } catch (error: any) {
+    } 
+    catch (error: any) 
+    {
       toast.error(`Failed to schedule meeting: ${error.message}`);
       throw error;
     }

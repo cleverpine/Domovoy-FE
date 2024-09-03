@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { SELECTED_ROOM } from '../constants/login';
 import { roomEmailToNumberMap } from '../mappers/roomMapper';
 import pineImg from './pineImg.png';
-import './LoginPage.css'; // Import the CSS file
+import './LoginPage.css'; 
 
 const fetchTokenFromBE = async (username2: string, password2: string) => {
     try {
