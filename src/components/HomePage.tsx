@@ -1,25 +1,21 @@
-import { useMsal } from '@azure/msal-react';
 import { addMinutes, format, isWithinInterval } from "date-fns";
 import { useEffect, useState } from 'react';
 
 import { Box, Button, List, ListItem, ListItemButton, Modal, Typography } from '@mui/material';
-import { ToastContainer, toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import { faCalendarPlus, faRefresh, faX } from '@fortawesome/free-solid-svg-icons';
+import { faCalendarPlus, faX } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
-import { graphConfig, loginRequest } from "../config/authConfig";
-import { AVAILABILITY_VIEW_INTERVAL, AVAILABLE_ROOMS_INTERVAL, AVAILABLE_ROOMS_STYLES, DATE_PATTERN, FETCH_CALENDAR_INTERVAL, OVERLAY_STYLES, ROOM_STATUSES, TIMEZONE, TIME_UPDATE_INTERVAL, TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME } from "../constants/home";
+import { useNavigate } from "react-router-dom";
+import { AVAILABLE_ROOMS_INTERVAL, AVAILABLE_ROOMS_STYLES, DATE_PATTERN, FETCH_CALENDAR_INTERVAL, OVERLAY_STYLES, PREFERRED_TIMEZONE, ROOM_STATUSES, TIME_UPDATE_INTERVAL, TIMEZONE } from "../constants/home";
 import { DEFAULT_SELECTED_ROOM, SELECTED_ROOM } from "../constants/login";
-import { fetchWithHeaders } from "../helpers/fetchHelper";
 import { roomEmailToNumberMap } from "../mappers/roomMapper";
-import { Session } from 'inspector';
 
 const HomePage = () => {
-  // const { instance, accounts, inProgress } = useMsal();
+  const navigate = useNavigate();
 
-  const [token, setToken] = useState<string>('');
   const [currentTime, setCurrentTime] = useState(new Date());
   // all meetings for today
   const [todaysMeetings, setTodaysMeetings] = useState<any>([]);
@@ -42,6 +38,7 @@ const HomePage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   // room interval for booking
   const [availableRoomInterval, setAvailableRoomInterval] = useState<any>(null);
+
   // Hide available rooms in 5 minutes
   useEffect(() => {
     if (availableRooms) {
@@ -55,37 +52,36 @@ const HomePage = () => {
     }
   }, [availableRooms]);
 
-
-const fetchCalendarFromBackend = async () => {
-  const calendarResponse = await fetch(`http://127.0.0.1:4000/fetch-calendar/rooms/${sessionStorage.getItem(SELECTED_ROOM) || DEFAULT_SELECTED_ROOM}`, {
+  const getRoomSchedule = async () => {
+    const calendarResponse = await fetch(`http://127.0.0.1:4000/fetch-calendar/rooms/${sessionStorage.getItem(SELECTED_ROOM) || DEFAULT_SELECTED_ROOM}`, {
       method: 'GET',
       headers: {
-          'Authorization': `Bearer ${localStorage.getItem("token")}`
+        'Authorization': `Bearer ${sessionStorage.getItem("token")}`,
+        'Content-Type': 'application/json',
+        'Prefer': PREFERRED_TIMEZONE,
+        'Accept': 'application/json',
       },
-  });
+    });
 
-  if (!calendarResponse.ok) {
-      throw new Error(`Error fetching calendar: ${calendarResponse.status} ${calendarResponse.statusText}`);
-  }
+    if (!calendarResponse.ok) {
+      toast.error(`Error fetching calendar: ${calendarResponse.status} ${calendarResponse.statusText}`);
+    }
 
-  return await calendarResponse.json();
-};
-
-
-
-
-
+    return await calendarResponse.json();
+  };
 
   // Fetch token & calendar every 30 minutes
   useEffect(() => {
     getInitialCalendar();
 
+    const tokenTimer = setInterval(getInitialCalendar, FETCH_CALENDAR_INTERVAL);
+
+    return () => clearInterval(tokenTimer);
   }, []);
 
   const getInitialCalendar = async () => {
-
-    const data = await fetchCalendarFromBackend();
-      setSchedules(data.value);
+    const data = await getRoomSchedule();
+    setSchedules(data.value);
     const selectedRoomEmail = sessionStorage.getItem(SELECTED_ROOM);
     const selectedRoomNumber = roomEmailToNumberMap[selectedRoomEmail!];
 
@@ -98,7 +94,7 @@ const fetchCalendarFromBackend = async () => {
       const now = new Date();
       setCurrentTime(now);
     }, TIME_UPDATE_INTERVAL);
-    
+
     return () => clearInterval(timer);
   }, []);
 
@@ -167,7 +163,6 @@ const fetchCalendarFromBackend = async () => {
     }
 
     updateRoomStatus(status);
-
     setCurrentMeeting(ongoingMeeting);
   }
 
@@ -220,9 +215,8 @@ const fetchCalendarFromBackend = async () => {
   };
 
   const getAvailableRooms = (scheduleResponse: any, currentRoom: string, excludedRoom: string) => {
-    const currentRoomNumber = +currentRoom
+    const currentRoomNumber = +currentRoom;
     const excludedRoomNumber = +excludedRoom;
-
     const availableRooms = filterAvailableRooms(scheduleResponse, excludedRoomNumber);
 
     return sortRoomsBasedOnDistance(availableRooms, currentRoomNumber);
@@ -232,12 +226,13 @@ const fetchCalendarFromBackend = async () => {
     return scheduleResponse && scheduleResponse
       .filter((room: any) => {
         const roomNumber = +roomEmailToNumberMap[room.scheduleId];
-        // return roomNumber !== excludedRoomNumber;
-        // TODO change to return roomNumber when 404 room does not exist anymore
         return roomNumber;
+        // TODO change to return roomNumber when 404 room does not exist anymore
+        // return roomNumber !== excludedRoomNumber;
       })
       .filter((room: any) => checkRoomAvailability(room.scheduleItems));
   }
+
   const sortRoomsBasedOnDistance = (availableRooms: any, currentRoomNumber: number) => {
     return availableRooms && availableRooms.sort((a: any, b: any) => {
       const roomNumberA = +roomEmailToNumberMap[a.scheduleId];
@@ -256,26 +251,33 @@ const fetchCalendarFromBackend = async () => {
       const start = new Date(item.start.dateTime);
       const end = new Date(item.end.dateTime);
 
+      // check whether the start of a scheduled meeting is the same as the end of the quick meeting to be scheduled
+      if (start.getMinutes() === endTime.getMinutes() && roomStatus !== ROOM_STATUSES.BUSY) {
+        return true;
+      }
+
+      // return true if the current time (or upcoming endTime of a meeting) does not overlap with the quick meeting to be scheduled
       return !(start < endTime && end > currentTime);
     });
   };
 
   const seeAvailableRooms = async () => {
-    const data = await fetchCalendarFromBackend();
-
+    const data = await getRoomSchedule();
     setSchedules(data.value);
 
     const currentRoom = roomEmailToNumberMap[sessionStorage.getItem(SELECTED_ROOM)!]
     // TODO excluded room will be deleted later
     const availableRooms = getAvailableRooms(data.value, currentRoom, "404");
     const roomsWithEmpty = availableRooms && availableRooms.map((room: any) => room.scheduleId);
+
     if (roomsWithEmpty && roomsWithEmpty.length === 0) {
       toast.error(`No available rooms for the next 10 minutes!`);
       setAvailableRooms(null);
       setSelectedOption('');
       return;
     }
-   setAvailableRooms(roomsWithEmpty);
+
+    setAvailableRooms(roomsWithEmpty);
     setSelectedOption(roomsWithEmpty && roomsWithEmpty[0]);
     setIsModalOpen(true);
   }
@@ -285,9 +287,7 @@ const fetchCalendarFromBackend = async () => {
   };
 
   const scheduleMeeting = async (selectedRoom: string): Promise<any> => {
-    const now = format(currentTime, DATE_PATTERN);
-
-    const data = await fetchCalendarFromBackend();
+    const data = await getRoomSchedule();
     setSchedules(data.value);
 
     const chosenRoomSchedule = data.value.find((room: any) => room.scheduleId === selectedRoom);
@@ -297,13 +297,11 @@ const fetchCalendarFromBackend = async () => {
       setSelectedOption('');
       return;
     }
-    
-    const formattedEndTime = getEndTime(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     try {
-      const now = new Date().toISOString(); 
-      const formattedEndTime = new Date(Date.now() + 3600000).toISOString(); 
-      const TIMEZONE = 'Europe/Sofia';
-    
+      const now = format(currentTime, DATE_PATTERN);
+      const formattedEndTime = getEndTime(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
       const body = {
         subject: 'System Rooms',
         start: {
@@ -324,29 +322,30 @@ const fetchCalendarFromBackend = async () => {
           },
         ],
       };
-      const token = localStorage.getItem('token');
-      if (!token) {
-          toast.error('No authentication token found.');
-          throw new Error('Authentication token is missing.');
-      }
-      const response = await fetch(`http://127.0.0.1:4000/schedule-meeting`, 
-        {
-        method: 'POST',
-        headers: 
-        {
-          "Authorization": `Bearer ${token}`,
-          // "graphConfig": JSON.stringify(graphConfig),
-        },
-        body: JSON.stringify(body),
 
-      });
-      
+      const token = sessionStorage.getItem('token');
+
+      if (!token) {
+        toast.error('No authentication token found.');
+      }
+
+      const response = await fetch(`http://127.0.0.1:4000/schedule-meeting`,
+        {
+          method: 'POST',
+          headers:
+          {
+            "Authorization": `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Prefer': PREFERRED_TIMEZONE,
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(body)
+        });
+
       const data = await response.json();
 
-      if (!response.ok) 
-      {
+      if (!response.ok) {
         toast.error(`Failed to schedule meeting: ${response.status} - ${response.statusText}`);
-        throw new Error(data.error.message);
       }
 
       toast.success(`Meeting successfully scheduled in Room ${roomEmailToNumberMap[selectedOption]}!`);
@@ -355,11 +354,9 @@ const fetchCalendarFromBackend = async () => {
       setSelectedOption('');
       setIsModalOpen(false);
       return data;
-    } 
-    catch (error: any) 
-    {
+    }
+    catch (error: any) {
       toast.error(`Failed to schedule meeting: ${error.message}`);
-      throw error;
     }
   }
 
@@ -408,13 +405,9 @@ const fetchCalendarFromBackend = async () => {
     return endTime;
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    window.location.reload();
-  };
-
-  if (!sessionStorage.getItem(SELECTED_ROOM)) {
-    handleLogout();
+  if (!sessionStorage.getItem(SELECTED_ROOM) || !sessionStorage.getItem("token")) {
+    sessionStorage.clear();
+    navigate('/login');
     return <></>;
   }
 
@@ -522,21 +515,8 @@ const fetchCalendarFromBackend = async () => {
           </List>
         </Box>
       </Modal>
-  
-      <Box sx={{ position: 'fixed', bottom: 16, left: 16 }}>
-        <Button 
-          variant="contained" 
-          color="secondary" 
-          onClick={handleLogout} 
-          style={{ backgroundColor: 'red', color: 'white' }}
-        >
-          Logout
-        </Button>
-      </Box>
     </div>
   );
-  
-
 }
 
 export default HomePage;

@@ -8,23 +8,23 @@ $downArrow: '../images/down-arrow.svg';
   justify-content: center;
   align-items: center;
   gap: 20px;
+  width: 70%;
   margin: auto;
 }
 
-.button {
-  display: flex;
-  gap: 10px;
-  padding: 8px 16px;
-  border: 1px solid $blue;
-  background-color: $blue;
-  color: $light;
-  font-size: 14px;
+.title {
+  background-image: linear-gradient(to right, #95fc8a 0%, #3ad551 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  font-weight: 800 !important;
+  font-size: 40px !important;
 }
 
 .select-input-wrapper {
   padding-bottom: 8px;
   margin-top: 8px;
-  border-bottom: 1px solid $dark;
   background-color: $light;
 }
 
@@ -37,8 +37,27 @@ $downArrow: '../images/down-arrow.svg';
   -moz-appearance: none;
   background-color: $light;
   background-image: url(#{$downArrow});
-  background-repeat:no-repeat; 
+  background-repeat: no-repeat; 
   background-position: 100%;
   font-size: 14px;
   color: $dark;
+}
+
+.login-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.login-button {
+  padding: 8px 16px !important;
+  color: $light !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+}
+
+.enabled-save {
+  border: 1px solid $blue !important;
+  background-color: $blue !important;
 }
