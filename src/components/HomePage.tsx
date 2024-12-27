@@ -1,5 +1,6 @@
 import { addMinutes, format, isWithinInterval } from "date-fns";
 import { useEffect, useState } from 'react';
+import { useNavigate } from "react-router-dom";
 
 import { Box, Button, List, ListItem, ListItemButton, Modal, Typography } from '@mui/material';
 import { toast, ToastContainer } from 'react-toastify';
@@ -8,9 +9,10 @@ import 'react-toastify/dist/ReactToastify.css';
 import { faCalendarPlus, faX } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
-import { useNavigate } from "react-router-dom";
-import { AVAILABLE_ROOMS_INTERVAL, AVAILABLE_ROOMS_STYLES, DATE_PATTERN, FETCH_CALENDAR_INTERVAL, OVERLAY_STYLES, PREFERRED_TIMEZONE, ROOM_STATUSES, TIME_UPDATE_INTERVAL, TIMEZONE } from "../constants/home";
-import { DEFAULT_SELECTED_ROOM, SELECTED_ROOM } from "../constants/login";
+import { AVAILABLE_ROOMS_INTERVAL, AVAILABLE_ROOMS_STYLES, DATE_PATTERN, FETCH_CALENDAR_INTERVAL, OVERLAY_STYLES, ROOM_STATUSES, TIME_UPDATE_INTERVAL, TIMEZONE } from "../constants/home";
+import { SELECTED_ROOM, TOKEN } from "../constants/login";
+import { fetchHelper } from "../helpers/fetchHelper";
+import { getToken } from "../helpers/getTokenHelper";
 import { roomEmailToNumberMap } from "../mappers/roomMapper";
 
 const HomePage = () => {
@@ -52,24 +54,6 @@ const HomePage = () => {
     }
   }, [availableRooms]);
 
-  const getRoomSchedule = async () => {
-    const calendarResponse = await fetch(`http://127.0.0.1:4000/fetch-calendar/rooms/${sessionStorage.getItem(SELECTED_ROOM) || DEFAULT_SELECTED_ROOM}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${sessionStorage.getItem("token")}`,
-        'Content-Type': 'application/json',
-        'Prefer': PREFERRED_TIMEZONE,
-        'Accept': 'application/json',
-      },
-    });
-
-    if (!calendarResponse.ok) {
-      toast.error(`Error fetching calendar: ${calendarResponse.status} ${calendarResponse.statusText}`);
-    }
-
-    return await calendarResponse.json();
-  };
-
   // Fetch token & calendar every 30 minutes
   useEffect(() => {
     getInitialCalendar();
@@ -81,12 +65,53 @@ const HomePage = () => {
 
   const getInitialCalendar = async () => {
     const data = await getRoomSchedule();
+
+    if (!data) {
+      return;
+    }
+
     setSchedules(data.value);
+
     const selectedRoomEmail = sessionStorage.getItem(SELECTED_ROOM);
     const selectedRoomNumber = roomEmailToNumberMap[selectedRoomEmail!];
 
     getCurrentRoomSchedule(data, selectedRoomNumber);
   }
+
+  const getRoomSchedule = async () => {
+    try {
+      const token = sessionStorage.getItem(TOKEN);
+      const roomData = await fetchRoomsSchedule(token as string);
+      return roomData;
+    } catch (error: any) {
+      toast.error('Error getting rooms schedule');
+      throw new Error('Error getting rooms schedule');
+    }
+  };
+
+  const fetchRoomsSchedule = async (token: string) => {
+    try {
+      const getRoomsScheduleUrl = 'http://127.0.0.1:4000/fetch-calendar/rooms';
+      const calendarResponse = await fetchHelper(getRoomsScheduleUrl, token);
+
+      if (!calendarResponse.ok) {
+        if (calendarResponse.status === 401) {
+          const token = await getToken();
+          sessionStorage.setItem(TOKEN, token);
+          getRoomSchedule();
+          return;
+        } else {
+          toast.error(`Failed to fetch rooms calendar: ${calendarResponse.status}`);
+          throw new Error(`An unexpected error occured: ${calendarResponse.status}`);
+        }
+      }
+
+      return await calendarResponse.json();
+    } catch (error) {
+      toast.error('Failed to fetch rooms calendar');
+      throw new Error('Failed to fetch rooms calendar');
+    }
+  };
 
   // Update current time every second
   useEffect(() => {
@@ -263,6 +288,11 @@ const HomePage = () => {
 
   const seeAvailableRooms = async () => {
     const data = await getRoomSchedule();
+
+    if (!data) {
+      return;
+    }
+
     setSchedules(data.value);
 
     const currentRoom = roomEmailToNumberMap[sessionStorage.getItem(SELECTED_ROOM)!]
@@ -288,12 +318,19 @@ const HomePage = () => {
 
   const scheduleMeeting = async (selectedRoom: string): Promise<any> => {
     const data = await getRoomSchedule();
+
+    if (!data) {
+      return;
+    }
+
     setSchedules(data.value);
 
     const chosenRoomSchedule = data.value.find((room: any) => room.scheduleId === selectedRoom);
+
     if (!checkRoomAvailability(chosenRoomSchedule.scheduleItems)) {
       toast.error(`Room ${roomEmailToNumberMap[selectedRoom]} is not available anymore! Please choose another room.`);
-      setAvailableRooms(null);
+      const filteredAvailableRooms = availableRooms?.filter((room: string) => room !== selectedRoom);
+      setAvailableRooms(filteredAvailableRooms ?? null);
       setSelectedOption('');
       return;
     }
@@ -323,31 +360,20 @@ const HomePage = () => {
         ],
       };
 
-      const token = sessionStorage.getItem('token');
+      const token = sessionStorage.getItem(TOKEN);
 
       if (!token) {
         toast.error('No authentication token found.');
       }
 
-      const response = await fetch(`http://127.0.0.1:4000/schedule-meeting`,
-        {
-          method: 'POST',
-          headers:
-          {
-            "Authorization": `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            'Prefer': PREFERRED_TIMEZONE,
-            'Accept': 'application/json',
-          },
-          body: JSON.stringify(body)
-        });
-
-      const data = await response.json();
+      const scheduleMeetingUrl = 'http://127.0.0.1:4000/schedule-meeting';
+      const response = await fetchHelper(scheduleMeetingUrl, token as string, body);
 
       if (!response.ok) {
         toast.error(`Failed to schedule meeting: ${response.status} - ${response.statusText}`);
       }
 
+      const data = await response.json();
       toast.success(`Meeting successfully scheduled in Room ${roomEmailToNumberMap[selectedOption]}!`);
 
       setAvailableRooms(null);
@@ -357,6 +383,7 @@ const HomePage = () => {
     }
     catch (error: any) {
       toast.error(`Failed to schedule meeting: ${error.message}`);
+      throw new Error(`Failed to schedule meeting: ${error.message}`);
     }
   }
 

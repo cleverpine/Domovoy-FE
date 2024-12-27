@@ -1,12 +1,12 @@
 import { FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { Box, Button, FormControl, InputLabel, MenuItem, Select, SelectChangeEvent, TextField, Typography } from '@mui/material';
-
-import { toast, ToastContainer } from 'react-toastify';
+import { Box, Button, FormControl, InputLabel, MenuItem, Select, SelectChangeEvent, Typography } from '@mui/material';
+import { ToastContainer } from 'react-toastify';
 
 import pineImg from '../assets/images/logo-green.png';
-import { SELECTED_ROOM } from '../constants/login';
+import { SELECTED_ROOM, TOKEN } from '../constants/login';
+import { getToken } from "../helpers/getTokenHelper";
 import { roomEmailToNumberMap } from '../mappers/roomMapper';
 
 export const LoginPage = () => {
@@ -23,38 +23,11 @@ export const LoginPage = () => {
 
         sessionStorage.setItem(SELECTED_ROOM, selectedOption);
 
-        const formData = new FormData(event.currentTarget);
-        const username = formData.get('username') as string;
-        const password = formData.get('password') as string;
-
-        const token = await fetchTokenFromBE(username, password);
+        const token = await getToken();
 
         if (token) {
-            sessionStorage.setItem('token', token);
+            sessionStorage.setItem(TOKEN, token);
             navigate('/home');
-        }
-    };
-
-    const fetchTokenFromBE = async (username: string, password: string) => {
-        try {
-            const response = await fetch('http://127.0.0.1:4000/fetch-token', {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ username, password })
-            });
-
-            if (response.status === 401) {
-                toast.error('Failed to login. Please try again!');
-                return;
-            }
-
-            const responseBody = await response.json();
-            return responseBody.token;
-        } catch (e) {
-            toast.error('Something went wrong');
         }
     };
 
@@ -63,7 +36,7 @@ export const LoginPage = () => {
     };
 
     return (
-        <div>
+        <>
             <Box className="login-container">
                 <img src={pineImg} alt="Pine" width="100px" />
                 <Typography
@@ -75,30 +48,6 @@ export const LoginPage = () => {
                 </Typography>
 
                 <form onSubmit={handleLogin} className="login-form">
-                    <TextField
-                        label="Email"
-                        variant="outlined"
-                        name="username"
-                        margin="normal"
-                        fullWidth
-                        className="typingInput"
-                        sx={{ m: 0 }}
-                        autoComplete="off"
-                        required
-                    />
-                    <TextField
-                        label="Password"
-                        type='password'
-                        variant="outlined"
-                        name="password"
-                        margin="normal"
-                        fullWidth
-                        className="typingInput"
-                        sx={{ m: 0 }}
-                        autoComplete="off"
-                        required
-                    />
-
                     <FormControl required fullWidth variant="outlined" sx={{ m: 0 }}>
                         <InputLabel>Select Room</InputLabel>
                         <Select
@@ -125,6 +74,6 @@ export const LoginPage = () => {
                 </form>
             </Box>
             <ToastContainer />
-        </div >
+        </>
     );
 };
