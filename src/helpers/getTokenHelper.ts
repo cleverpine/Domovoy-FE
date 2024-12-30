@@ -1,7 +1,9 @@
 import { toast } from 'react-toastify';
 
+import { BASE_URL } from "../config/config";
+
 const fetchToken = async () => {
-  return await fetch('http://127.0.0.1:4000/token', {
+  return await fetch(`${BASE_URL}/token`, {
     method: 'POST',
     headers: {
       'Accept': 'application/json',

@@ -9,6 +9,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { faCalendarPlus, faX } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
+import { BASE_URL } from "../config/config";
 import { AVAILABLE_ROOMS_INTERVAL, AVAILABLE_ROOMS_STYLES, DATE_PATTERN, FETCH_CALENDAR_INTERVAL, OVERLAY_STYLES, ROOM_STATUSES, TIME_UPDATE_INTERVAL, TIMEZONE } from "../constants/home";
 import { SELECTED_ROOM, TOKEN } from "../constants/login";
 import { fetchHelper } from "../helpers/fetchHelper";
@@ -91,7 +92,7 @@ const HomePage = () => {
 
   const fetchRoomsSchedule = async (token: string) => {
     try {
-      const getRoomsScheduleUrl = 'http://127.0.0.1:4000/fetch-calendar/rooms';
+      const getRoomsScheduleUrl = `${BASE_URL}/fetch-calendar/rooms`;
       const calendarResponse = await fetchHelper(getRoomsScheduleUrl, token);
 
       if (!calendarResponse.ok) {
@@ -366,7 +367,7 @@ const HomePage = () => {
         toast.error('No authentication token found.');
       }
 
-      const scheduleMeetingUrl = 'http://127.0.0.1:4000/schedule-meeting';
+      const scheduleMeetingUrl = `${BASE_URL}/schedule-meeting`;
       const response = await fetchHelper(scheduleMeetingUrl, token as string, body);
 
       if (!response.ok) {
