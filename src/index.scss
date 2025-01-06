@@ -1,6 +1,7 @@
 html {
   height: 100vh;
   overflow: hidden;
+  touch-action: none;
 }
 
 body {
@@ -9,6 +10,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
+  touch-action: none;
 }
 
 

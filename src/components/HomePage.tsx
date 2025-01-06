@@ -1,25 +1,24 @@
-import { useMsal } from '@azure/msal-react';
 import { addMinutes, format, isWithinInterval } from "date-fns";
 import { useEffect, useState } from 'react';
+import { useNavigate } from "react-router-dom";
 
 import { Box, Button, List, ListItem, ListItemButton, Modal, Typography } from '@mui/material';
-import { ToastContainer, toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import { faCalendarPlus, faX } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
-import { graphConfig, loginRequest } from "../config/authConfig";
-import { AVAILABILITY_VIEW_INTERVAL, AVAILABLE_ROOMS_INTERVAL, AVAILABLE_ROOMS_STYLES, DATE_PATTERN, FETCH_CALENDAR_INTERVAL, OVERLAY_STYLES, ROOM_STATUSES, TIMEZONE, TIME_UPDATE_INTERVAL, TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME } from "../constants/home";
-import { SELECTED_ROOM } from "../constants/login";
-import { fetchWithHeaders } from "../helpers/fetchHelper";
+import { BASE_URL } from "../config/config";
+import { AVAILABLE_ROOMS_INTERVAL, AVAILABLE_ROOMS_STYLES, DATE_PATTERN, FETCH_CALENDAR_INTERVAL, OVERLAY_STYLES, ROOM_STATUSES, TIME_UPDATE_INTERVAL, TIMEZONE } from "../constants/home";
+import { SELECTED_ROOM, TOKEN } from "../constants/login";
+import { fetchHelper } from "../helpers/fetchHelper";
+import { getToken } from "../helpers/getTokenHelper";
 import { roomEmailToNumberMap } from "../mappers/roomMapper";
 
-
 const HomePage = () => {
-  const { instance, accounts, inProgress } = useMsal();
+  const navigate = useNavigate();
 
-  const [token, setToken] = useState<string>('');
   const [currentTime, setCurrentTime] = useState(new Date());
   // all meetings for today
   const [todaysMeetings, setTodaysMeetings] = useState<any>([]);
@@ -56,30 +55,64 @@ const HomePage = () => {
     }
   }, [availableRooms]);
 
-  const acquireToken = () => {
-    if (inProgress === "none" && accounts.length > 0) {
-      instance.acquireTokenSilent({
-        ...loginRequest,
-        account: accounts[0],
-        forceRefresh: true,
-        refreshTokenExpirationOffsetSeconds: TIME_UPDATE_REFRESH_TOKEN_VALIDITY_TIME
-      }).then((response: any) => {
-        setToken(response.accessToken);
-        fetchCalendar(response.accessToken);
-      }).catch((error: any) => {
-        console.log('Acquire token silent failed', error);
-      });
+  // Fetch token & calendar every 30 minutes
+  useEffect(() => {
+    getInitialCalendar();
+
+    const tokenTimer = setInterval(getInitialCalendar, FETCH_CALENDAR_INTERVAL);
+
+    return () => clearInterval(tokenTimer);
+  }, []);
+
+  const getInitialCalendar = async () => {
+    const data = await getRoomSchedule();
+
+    if (!data) {
+      return;
+    }
+
+    setSchedules(data.value);
+
+    const selectedRoomEmail = sessionStorage.getItem(SELECTED_ROOM);
+    const selectedRoomNumber = roomEmailToNumberMap[selectedRoomEmail!];
+
+    getCurrentRoomSchedule(data, selectedRoomNumber);
+  }
+
+  const getRoomSchedule = async () => {
+    try {
+      const token = sessionStorage.getItem(TOKEN);
+      const roomData = await fetchRoomsSchedule(token as string);
+      return roomData;
+    } catch (error: any) {
+      toast.error('Error getting rooms schedule');
+      throw new Error('Error getting rooms schedule');
     }
   };
 
-  // Fetch token & calendar every 30 minutes
-  useEffect(() => {
-    acquireToken();
+  const fetchRoomsSchedule = async (token: string) => {
+    try {
+      const getRoomsScheduleUrl = `${BASE_URL}/fetch-calendar/rooms`;
+      const calendarResponse = await fetchHelper(getRoomsScheduleUrl, token);
 
-    const tokenTimer = setInterval(acquireToken, FETCH_CALENDAR_INTERVAL);
+      if (!calendarResponse.ok) {
+        if (calendarResponse.status === 401) {
+          const token = await getToken();
+          sessionStorage.setItem(TOKEN, token);
+          getRoomSchedule();
+          return;
+        } else {
+          toast.error(`Failed to fetch rooms calendar: ${calendarResponse.status}`);
+          throw new Error(`An unexpected error occured: ${calendarResponse.status}`);
+        }
+      }
 
-    return () => clearInterval(tokenTimer);
-  }, [accounts, instance, loginRequest]);
+      return await calendarResponse.json();
+    } catch (error) {
+      toast.error('Failed to fetch rooms calendar');
+      throw new Error('Failed to fetch rooms calendar');
+    }
+  };
 
   // Update current time every second
   useEffect(() => {
@@ -101,33 +134,6 @@ const HomePage = () => {
 
     return () => clearInterval(timer);
   }, [todaysMeetings]);
-
-  const fetchCalendarRequest = async (token: string) => {
-    const now = new Date();
-    const daysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-    const formattedDateNow = format(now, DATE_PATTERN);
-    const formattedDaysFromNow = format(daysFromNow, DATE_PATTERN);
-
-    const body = {
-      schedules: Object.keys(roomEmailToNumberMap),
-      startTime: { dateTime: formattedDateNow, TIMEZONE },
-      endTime: { dateTime: formattedDaysFromNow, TIMEZONE },
-      AVAILABILITY_VIEW_INTERVAL,
-    };
-
-    const response = await fetchWithHeaders(graphConfig.graphCalendarEndpoint, token, body);
-
-    return response.json();
-  }
-
-  const fetchCalendar = async (token: string) => {
-    const data = await fetchCalendarRequest(token);
-    setSchedules(data.value);
-    const selectedRoomEmail = sessionStorage.getItem(SELECTED_ROOM);
-    const selectedRoomNumber = roomEmailToNumberMap[selectedRoomEmail!];
-
-    getCurrentRoomSchedule(data, selectedRoomNumber);
-  }
 
   const getCurrentRoomSchedule = (data: any, selectedRoomNumber: string) => {
     if (data && data.value) {
@@ -183,7 +189,6 @@ const HomePage = () => {
     }
 
     updateRoomStatus(status);
-
     setCurrentMeeting(ongoingMeeting);
   }
 
@@ -236,9 +241,8 @@ const HomePage = () => {
   };
 
   const getAvailableRooms = (scheduleResponse: any, currentRoom: string, excludedRoom: string) => {
-    const currentRoomNumber = +currentRoom
+    const currentRoomNumber = +currentRoom;
     const excludedRoomNumber = +excludedRoom;
-
     const availableRooms = filterAvailableRooms(scheduleResponse, excludedRoomNumber);
 
     return sortRoomsBasedOnDistance(availableRooms, currentRoomNumber);
@@ -248,9 +252,9 @@ const HomePage = () => {
     return scheduleResponse && scheduleResponse
       .filter((room: any) => {
         const roomNumber = +roomEmailToNumberMap[room.scheduleId];
-        return roomNumber !== excludedRoomNumber;
+        return roomNumber;
         // TODO change to return roomNumber when 404 room does not exist anymore
-        // return roomNumber;
+        // return roomNumber !== excludedRoomNumber;
       })
       .filter((room: any) => checkRoomAvailability(room.scheduleItems));
   }
@@ -273,12 +277,22 @@ const HomePage = () => {
       const start = new Date(item.start.dateTime);
       const end = new Date(item.end.dateTime);
 
+      // check whether the start of a scheduled meeting is the same as the end of the quick meeting to be scheduled
+      if (start.getMinutes() === endTime.getMinutes() && roomStatus !== ROOM_STATUSES.BUSY) {
+        return true;
+      }
+
+      // return true if the current time (or upcoming endTime of a meeting) does not overlap with the quick meeting to be scheduled
       return !(start < endTime && end > currentTime);
     });
   };
 
   const seeAvailableRooms = async () => {
-    const data = await fetchCalendarRequest(token);
+    const data = await getRoomSchedule();
+
+    if (!data) {
+      return;
+    }
 
     setSchedules(data.value);
 
@@ -304,31 +318,37 @@ const HomePage = () => {
   };
 
   const scheduleMeeting = async (selectedRoom: string): Promise<any> => {
-    const now = format(currentTime, DATE_PATTERN);
+    const data = await getRoomSchedule();
 
-    const data = await fetchCalendarRequest(token);
+    if (!data) {
+      return;
+    }
+
     setSchedules(data.value);
 
     const chosenRoomSchedule = data.value.find((room: any) => room.scheduleId === selectedRoom);
+
     if (!checkRoomAvailability(chosenRoomSchedule.scheduleItems)) {
       toast.error(`Room ${roomEmailToNumberMap[selectedRoom]} is not available anymore! Please choose another room.`);
-      setAvailableRooms(null);
+      const filteredAvailableRooms = availableRooms?.filter((room: string) => room !== selectedRoom);
+      setAvailableRooms(filteredAvailableRooms ?? null);
       setSelectedOption('');
       return;
     }
 
-    const formattedEndTime = getEndTime(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
     try {
+      const now = format(currentTime, DATE_PATTERN);
+      const formattedEndTime = getEndTime(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
       const body = {
         subject: 'System Rooms',
         start: {
           dateTime: now,
-          timeZone: TIMEZONE
+          timeZone: TIMEZONE,
         },
         end: {
           dateTime: formattedEndTime,
-          timeZone: TIMEZONE
+          timeZone: TIMEZONE,
         },
         attendees: [
           {
@@ -337,28 +357,34 @@ const HomePage = () => {
               name: roomEmailToNumberMap[selectedOption],
             },
             type: 'resource',
-          }
+          },
         ],
       };
 
-      const response = await fetchWithHeaders(graphConfig.graphScheduleMeetingEndpoint, token, body);
+      const token = sessionStorage.getItem(TOKEN);
 
-      const data = await response.json();
+      if (!token) {
+        toast.error('No authentication token found.');
+      }
+
+      const scheduleMeetingUrl = `${BASE_URL}/schedule-meeting`;
+      const response = await fetchHelper(scheduleMeetingUrl, token as string, body);
 
       if (!response.ok) {
         toast.error(`Failed to schedule meeting: ${response.status} - ${response.statusText}`);
-        throw new Error(data.error.message);
       }
 
+      const data = await response.json();
       toast.success(`Meeting successfully scheduled in Room ${roomEmailToNumberMap[selectedOption]}!`);
 
       setAvailableRooms(null);
       setSelectedOption('');
       setIsModalOpen(false);
       return data;
-    } catch (error: any) {
+    }
+    catch (error: any) {
       toast.error(`Failed to schedule meeting: ${error.message}`);
-      throw error;
+      throw new Error(`Failed to schedule meeting: ${error.message}`);
     }
   }
 
@@ -407,14 +433,9 @@ const HomePage = () => {
     return endTime;
   };
 
-  const handleLogout = () => {
-    instance.logoutRedirect().catch(e => {
-      console.error(e);
-    });
-  };
-
-  if (!sessionStorage.getItem(SELECTED_ROOM)) {
-    handleLogout();
+  if (!sessionStorage.getItem(SELECTED_ROOM) || !sessionStorage.getItem("token")) {
+    sessionStorage.clear();
+    navigate('/login');
     return <></>;
   }
 
@@ -524,7 +545,6 @@ const HomePage = () => {
       </Modal>
     </div>
   );
-
 }
 
 export default HomePage;
