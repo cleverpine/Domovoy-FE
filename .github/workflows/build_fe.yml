@@ -1,0 +1,49 @@
+name: Frontend Build
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16 # Compatible with your dependencies
+          cache: 'npm'
+
+      # Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Run linting
+      - name: Run linting
+        run: npx eslint './src/**/*.{js,jsx,ts,tsx}' --max-warnings=0
+
+      # Run unit tests
+      - name: Run unit tests
+        run: npm test -- --watchAll=false
+
+      # Build the project
+      - name: Build the project
+        run: npm run build
+
+      # Save build artifacts (optional)
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: build/
