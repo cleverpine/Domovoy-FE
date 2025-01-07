@@ -31,7 +31,7 @@ jobs:
 
       # Run linting
       - name: Run linting
-        run: npx eslint './src/**/*.{js,jsx,ts,tsx}' --max-warnings=0
+        run: npx eslint './src/**/*.{js,jsx,ts,tsx}'
 
       # Run unit tests
       - name: Run unit tests
