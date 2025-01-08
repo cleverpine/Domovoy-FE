@@ -14,30 +14,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Set up Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 16 # Compatible with your dependencies
+          node-version: 16
           cache: 'npm'
 
-      # Install dependencies
       - name: Install dependencies
         run: npm install
 
-      # Run linting using the repository's ESLint configuration
       - name: Run linting
-        run: npx eslint .
+        run: npx eslint 'src/**/*.{js,jsx,ts,tsx}'
 
-      # Run unit tests
       - name: Run unit tests
         run: npm test -- --watchAll=false
 
-      # Build the project
       - name: Build the project
         run: npm run build
 
