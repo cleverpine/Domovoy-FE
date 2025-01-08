@@ -1,12 +1,10 @@
-import { PREFERRED_TIMEZONE } from "../constants/home";
 
 export const fetchHelper = async (url: string, token: string, body?: object) => {
-  const options: RequestInit = {
+  const options: any = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Prefer': PREFERRED_TIMEZONE,
       Authorization: `Bearer ${token}`,
     },
   };
