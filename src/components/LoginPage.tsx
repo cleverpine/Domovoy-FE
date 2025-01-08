@@ -10,7 +10,7 @@ import { getToken } from "../helpers/getTokenHelper";
 import { roomEmailToNumberMap } from '../mappers/roomMapper';
 
 export const LoginPage = () => {
-    const [selectedOption, setSelectedOption] = useState('');
+    const [selectedOption, setSelectedOption] = useState<string>('');
 
     const navigate = useNavigate();
 

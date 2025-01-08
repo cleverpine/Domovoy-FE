@@ -6,6 +6,7 @@ import { Box, Button, List, ListItem, ListItemButton, Modal, Typography } from '
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { faCalendarPlus, faX } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
@@ -194,26 +195,29 @@ const HomePage = () => {
 
   const updateRoomStatus = (status: string) => {
     switch (status) {
-      case ROOM_STATUSES.BUSY:
+      case ROOM_STATUSES.BUSY: {
         setOverlayStyles(OVERLAY_STYLES.BUSY);
         setRoomStatus(ROOM_STATUSES.BUSY);
         setAvailableRoomsStyles(AVAILABLE_ROOMS_STYLES.BUSY);
         const updatedMeetings = todaysMeetings.slice(1);
         setBusyRoomMeetings(updatedMeetings.slice(0, 4));
         break;
-      case ROOM_STATUSES.STARTING_SOON:
+      }
+      case ROOM_STATUSES.STARTING_SOON: {
         setOverlayStyles(OVERLAY_STYLES.STARTING_SOON);
         setRoomStatus(ROOM_STATUSES.STARTING_SOON);
         setAvailableRoomsStyles(AVAILABLE_ROOMS_STYLES.STARTING_SOON);
         setBusyRoomMeetings([]);
         break;
+      }
       case ROOM_STATUSES.AVAILABLE:
-      default:
+      default: {
         setOverlayStyles(OVERLAY_STYLES.AVAILABLE);
         setRoomStatus(ROOM_STATUSES.AVAILABLE);
         setAvailableRoomsStyles(AVAILABLE_ROOMS_STYLES.AVAILABLE);
         setBusyRoomMeetings([]);
         break;
+      }
     }
   }
 
@@ -240,21 +244,18 @@ const HomePage = () => {
     }).format(date);
   };
 
-  const getAvailableRooms = (scheduleResponse: any, currentRoom: string, excludedRoom: string) => {
+  const getAvailableRooms = (scheduleResponse: any, currentRoom: string) => {
     const currentRoomNumber = +currentRoom;
-    const excludedRoomNumber = +excludedRoom;
-    const availableRooms = filterAvailableRooms(scheduleResponse, excludedRoomNumber);
+    const availableRooms = filterAvailableRooms(scheduleResponse);
 
     return sortRoomsBasedOnDistance(availableRooms, currentRoomNumber);
   };
 
-  const filterAvailableRooms = (scheduleResponse: any, excludedRoomNumber: number) => {
+  const filterAvailableRooms = (scheduleResponse: any) => {
     return scheduleResponse && scheduleResponse
       .filter((room: any) => {
         const roomNumber = +roomEmailToNumberMap[room.scheduleId];
         return roomNumber;
-        // TODO change to return roomNumber when 404 room does not exist anymore
-        // return roomNumber !== excludedRoomNumber;
       })
       .filter((room: any) => checkRoomAvailability(room.scheduleItems));
   }
@@ -298,7 +299,7 @@ const HomePage = () => {
 
     const currentRoom = roomEmailToNumberMap[sessionStorage.getItem(SELECTED_ROOM)!]
     // TODO excluded room will be deleted later
-    const availableRooms = getAvailableRooms(data.value, currentRoom, "404");
+    const availableRooms = getAvailableRooms(data.value, currentRoom);
     const roomsWithEmpty = availableRooms && availableRooms.map((room: any) => room.scheduleId);
 
     if (roomsWithEmpty && roomsWithEmpty.length === 0) {
@@ -471,7 +472,7 @@ const HomePage = () => {
             }
           })()}
           <Box className={`select-input-wrapper-home ${availableRoomsStyles}`}>
-            {schedules && <Button variant="outlined" className="available-rooms-btn"><FontAwesomeIcon icon={faCalendarPlus} onClick={seeAvailableRooms} /></Button>}
+            {schedules && <Button variant="outlined" className="available-rooms-btn"><FontAwesomeIcon icon={faCalendarPlus as IconProp} onClick={seeAvailableRooms} /></Button>}
           </Box>
         </div>
         <div className="top-container">
@@ -530,7 +531,7 @@ const HomePage = () => {
               <Typography variant="h5">Book room between</Typography>
               <Typography variant="h5" className="availability-interval">{availableRoomInterval}</Typography>
             </div>
-            <FontAwesomeIcon className="close-modal-icon" icon={faX} onClick={() => setIsModalOpen(false)} />
+            <FontAwesomeIcon className="close-modal-icon" icon={faX as IconProp} onClick={() => setIsModalOpen(false)} />
           </Box>
           <List className="list-wrapper">
             {availableRooms && availableRooms?.map((room, index) => (
