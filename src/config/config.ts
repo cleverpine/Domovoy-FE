@@ -1,1 +1,1 @@
-export const BASE_URL = 'https://domovoy2-service.thepineslab.net';
+export const BASE_URL = process.env.BASE_URL || "https://default-url.com";
