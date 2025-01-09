@@ -33,7 +33,11 @@ jobs:
         run: npm test -- --watchAll=false
 
       - name: Build the project
-        run: npm run build
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+        run: |
+          echo "Building with BASE_URL=${BASE_URL}"
+          npm run build
 
       # Save build artifacts (optional)
       - name: Upload build artifacts
