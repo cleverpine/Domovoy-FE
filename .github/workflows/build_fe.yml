@@ -1,18 +1,28 @@
 name: Frontend Build
 
 on:
-  push:
+  # Run CI steps on pull requests
+  pull_request:
     branches:
       - main
       - develop
-  pull_request:
-    branches:
-      - '*'
+
+  # Allow manual deployment
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Select the environment to deploy to (dev or prod)'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
 
 jobs:
-  frontend:
+  ci:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -45,3 +55,88 @@ jobs:
         with:
           name: build-artifacts
           path: build/
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY: cleverpine.azurecr.io
+      IMAGE_REPOSITORY: domovoy2.0
+      BUILD_DIR: ./build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set environment-specific variables
+        id: set-env
+        run: |
+          if [ "${{ github.event.inputs.environment }}" = "dev" ]; then
+            echo "KUBE_NAMESPACE=domovoy2-dev" >> $GITHUB_ENV
+            echo "RELEASE_NAME=domovoy2-dev" >> $GITHUB_ENV
+            echo "VALUES_FILE=./build/values.dev.yaml" >> $GITHUB_ENV
+          elif [ "${{ github.event.inputs.environment }}" = "prod" ]; then
+            echo "KUBE_NAMESPACE=domovoy2" >> $GITHUB_ENV
+            echo "RELEASE_NAME=domovoy2" >> $GITHUB_ENV
+            echo "VALUES_FILE=./build/values.prod.yaml" >> $GITHUB_ENV
+          else
+            echo "Invalid environment: ${{ github.event.inputs.environment }}"
+            exit 1
+          fi
+
+      - name: Log in to Azure Container Registry
+        uses: azure/docker-login@v2
+        with:
+          login-server: ${{ env.REGISTRY }}
+          username: ${{ secrets.SP_ACR_AKS_USERNAME }}
+          password: ${{ secrets.SP_ACR_AKS_PASSWORD }}
+
+      - name: Set date-based tag
+        id: set-tag
+        run: |
+          YEAR=$(date +'%Y')
+          MONTH=$(date +'%m')
+          DAY=$(date +'%d')
+          TAG="$YEAR$MONTH$DAY.${{ github.run_number }}"
+          echo "TAG=$TAG" >> $GITHUB_ENV
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_REPOSITORY }}:${{ env.TAG }}
+
+      - name: Package Helm chart
+        run: |
+          mkdir -p ${{ env.BUILD_DIR }}
+          helm package ./chart --destination ${{ env.BUILD_DIR }}
+
+      - name: Copy additional files
+        run: |
+          cp ./chart/values.*.yaml ${{ env.BUILD_DIR }}/
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: drop
+          path: ${{ env.BUILD_DIR }}
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Configure AKS context
+        uses: azure/aks-set-context@v4
+        with:
+          resource-group: internal-development
+          cluster-name: internal-development-aks
+
+      - name: Deploy Helm chart
+        run: |
+          helm upgrade --install ${{ env.RELEASE_NAME }} ./build/domovoy2-0.1.0.tgz \
+            --namespace ${{ env.KUBE_NAMESPACE }} \
+            -f ${{ env.VALUES_FILE }} \
+            --set image.tag=${{ env.TAG }}
